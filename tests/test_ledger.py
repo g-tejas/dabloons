@@ -25,6 +25,10 @@ def test_renderer_owns_journal_syntax() -> None:
         created_at=datetime.now(UTC),
     )
     assert render_transaction(transaction) == (
+        "commodity 1.00000000 USD\n"
+        "account assets:bank:checking\n"
+        "account expenses:food\n"
+        "\n"
         "2026-08-04 * Merchant\n"
         "    ; id: txn_123\n"
         "    ; note: Reviewed\n"
@@ -43,6 +47,9 @@ def test_watermark_is_a_zero_amount_balance_assertion() -> None:
         created_at=datetime.now(UTC),
     )
     assert render_watermark(watermark) == (
+        "commodity 1.00000000 USD\n"
+        "account assets:bank:checking\n"
+        "\n"
         "2026-08-04 * Balance watermark\n"
         "    ; watermark-id: wm_123\n"
         "    assets:bank:checking    0 USD = 100.00 USD\n"

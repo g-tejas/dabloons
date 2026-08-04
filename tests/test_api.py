@@ -151,3 +151,43 @@ def test_user_can_create_watermark_without_evidence(tmp_path: Path) -> None:
         },
     )
     assert same_day.status_code == 409
+
+
+def test_missing_hledger_rejects_approval_and_keeps_transaction_staged(
+    tmp_path: Path,
+) -> None:
+    api = TestClient(
+        create_app(
+            data_dir=tmp_path / "data",
+            compiler=FakeCompiler(),
+            hledger_executable=str(tmp_path / "not-installed-hledger"),
+        )
+    )
+    staged = api.post(
+        "/v1/staged-transactions",
+        json={
+            "date": "2026-08-04",
+            "payee": "Safe failure",
+            "postings": [
+                {
+                    "account": "assets:bank:checking",
+                    "commodity": "USD",
+                    "quantity": "-5.00",
+                },
+                {
+                    "account": "expenses:misc",
+                    "commodity": "USD",
+                    "quantity": "5.00",
+                },
+            ],
+        },
+    ).json()
+
+    rejected = api.post(f"/v1/staged-transactions/{staged['id']}/approve")
+
+    assert rejected.status_code == 409
+    assert "is not installed" in rejected.json()["detail"]
+    assert (
+        api.get(f"/v1/transactions/{staged['id']}").json()["state"] == "staged"
+    )
+    assert not list((tmp_path / "data" / "ledger" / "reconciled").glob("*.journal"))

@@ -21,7 +21,17 @@ def _amount(quantity: object, commodity: str) -> str:
     return f"{quantity} {_single_line(commodity)}"
 
 
+def _declarations(accounts: set[str], commodities: set[str]) -> str:
+    lines = [f"commodity 1.00000000 {_single_line(item)}" for item in sorted(commodities)]
+    lines.extend(f"account {_single_line(item)}" for item in sorted(accounts))
+    return "\n".join(lines) + "\n\n"
+
+
 def render_transaction(transaction: Transaction) -> str:
+    declarations = _declarations(
+        {posting.account for posting in transaction.postings},
+        {posting.commodity for posting in transaction.postings},
+    )
     lines = [f"{transaction.date.isoformat()} * {_single_line(transaction.payee)}"]
     lines.append(f"    ; id: {transaction.id}")
     if transaction.note:
@@ -35,11 +45,11 @@ def render_transaction(transaction: Transaction) -> str:
             f"    {_single_line(posting.account)}    "
             f"{_amount(posting.quantity, posting.commodity)}"
         )
-    return "\n".join(lines) + "\n"
+    return declarations + "\n".join(lines) + "\n"
 
 
 def render_watermark(watermark: Watermark) -> str:
-    return (
+    return _declarations({watermark.account}, {watermark.commodity}) + (
         f"{watermark.date.isoformat()} * Balance watermark\n"
         f"    ; watermark-id: {watermark.id}\n"
         f"    {_single_line(watermark.account)}    "

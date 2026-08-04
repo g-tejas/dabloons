@@ -1,4 +1,4 @@
-# Beans Finance System Plan
+# Dabloons Finance System Plan
 
 ## 1. Product vision
 
@@ -73,18 +73,18 @@ hledger supports ordinary and extended assertion forms (`=`, `==`, `=*`, and `==
 
 ### 3.4 Precise transaction statuses
 
-hledger explicitly models unmarked, pending, and cleared transactions and provides composable status filters. Beans will use only two application states, but hledger's status model maps naturally to their rendered representations:
+hledger explicitly models unmarked, pending, and cleared transactions and provides composable status filters. Dabloons will use only two application states, but hledger's status model maps naturally to their rendered representations:
 
 - `!` for a staged preview
 - `*` for reconciled transactions
 
 ### 3.5 Programmatic integration
 
-hledger provides structured JSON output, source positions, and an officially supported HTTP JSON interface. Beans will normally invoke hledger as a subprocess and normalize results into its own API models.
+hledger provides structured JSON output, source positions, and an officially supported HTTP JSON interface. Dabloons will normally invoke hledger as a subprocess and normalize results into its own API models.
 
 ### 3.6 Ledger features intentionally not required
 
-Ledger's embedded expressions, Python expressions, and journal programming facilities are undesirable for a deterministic AI-generated accounting system. Beans should use explicit amounts and declarative journal entries. Ledger may have an advantage for some advanced investment-lot workflows, but that is not currently the dominant requirement.
+Ledger's embedded expressions, Python expressions, and journal programming facilities are undesirable for a deterministic AI-generated accounting system. Dabloons should use explicit amounts and declarative journal entries. Ledger may have an advantage for some advanced investment-lot workflows, but that is not currently the dominant requirement.
 
 ## 4. Domain model
 

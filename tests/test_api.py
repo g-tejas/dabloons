@@ -92,6 +92,7 @@ def test_upload_compile_edit_and_individually_approve(tmp_path: Path) -> None:
     assert approved.json()["approved_at"]
     batch = tmp_path / "data" / "ledger" / "reconciled" / f"{staged['id']}.journal"
     assert "Neighborhood Coffee" in batch.read_text()
+    assert f"; transaction-group: {staged['transaction_group_id']}" in batch.read_text()
 
     immutable = api.patch(
         f"/v1/staged-transactions/{staged['id']}",
@@ -122,6 +123,91 @@ def test_manual_transaction_must_balance(tmp_path: Path) -> None:
         },
     )
     assert response.status_code == 422
+
+
+def test_transactions_receive_groups_and_can_reuse_an_existing_group(
+    tmp_path: Path,
+) -> None:
+    api = client(tmp_path)
+    transaction = {
+        "date": "2026-08-01",
+        "payee": "Tablet",
+        "postings": [
+            {
+                "account": "expenses:electronics",
+                "commodity": "USD",
+                "quantity": "500.00",
+            },
+            {
+                "account": "assets:bank:checking",
+                "commodity": "USD",
+                "quantity": "-500.00",
+            },
+        ],
+    }
+
+    purchase = api.post("/v1/staged-transactions", json=transaction)
+    unrelated = api.post(
+        "/v1/staged-transactions",
+        json={**transaction, "payee": "Another purchase"},
+    )
+
+    assert purchase.status_code == 201
+    assert unrelated.status_code == 201
+    purchase_group = purchase.json()["transaction_group_id"]
+    assert purchase_group.startswith("txg_")
+    assert unrelated.json()["transaction_group_id"] != purchase_group
+
+    refund = api.post(
+        "/v1/staged-transactions",
+        json={
+            **transaction,
+            "payee": "Tablet refund",
+            "transaction_group_id": purchase_group,
+            "postings": [
+                {
+                    "account": "expenses:electronics",
+                    "commodity": "USD",
+                    "quantity": "-500.00",
+                },
+                {
+                    "account": "assets:bank:checking",
+                    "commodity": "USD",
+                    "quantity": "500.00",
+                },
+            ],
+        },
+    )
+
+    assert refund.status_code == 201
+    assert refund.json()["transaction_group_id"] == purchase_group
+
+
+def test_unknown_transaction_group_is_rejected(tmp_path: Path) -> None:
+    api = client(tmp_path)
+    response = api.post(
+        "/v1/staged-transactions",
+        json={
+            "date": "2026-08-01",
+            "payee": "Unknown group",
+            "transaction_group_id": "txg_1234567890abcdef1234567890abcdef",
+            "postings": [
+                {
+                    "account": "expenses:misc",
+                    "commodity": "USD",
+                    "quantity": "1.00",
+                },
+                {
+                    "account": "assets:bank:checking",
+                    "commodity": "USD",
+                    "quantity": "-1.00",
+                },
+            ],
+        },
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Transaction group not found"
 
 
 def test_user_can_create_watermark_without_evidence(tmp_path: Path) -> None:

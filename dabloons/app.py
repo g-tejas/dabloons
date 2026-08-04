@@ -62,6 +62,13 @@ def create_app(
     ledger = Hledger(root / "ledger", hledger_executable)
     promotion_lock = threading.Lock()
 
+    def transaction_group_id(requested: str | None = None) -> str:
+        if requested is None:
+            return _id("txg")
+        if not store.transaction_group_exists(requested):
+            raise HTTPException(404, "Transaction group not found")
+        return requested
+
     app = FastAPI(
         title="Dabloons API",
         version="0.1.0",
@@ -148,6 +155,7 @@ def create_app(
                 transaction = Transaction(
                     **proposal.model_dump(),
                     id=_id("txn"),
+                    transaction_group_id=transaction_group_id(),
                     state=TransactionState.STAGED,
                     statement_id=statement.id,
                     created_at=_now(),
@@ -173,8 +181,9 @@ def create_app(
     @app.post("/v1/staged-transactions", response_model=Transaction, status_code=201)
     def create_staged_transaction(request: TransactionInput) -> Transaction:
         transaction = Transaction(
-            **request.model_dump(),
+            **request.model_dump(exclude={"transaction_group_id"}),
             id=_id("txn"),
+            transaction_group_id=transaction_group_id(request.transaction_group_id),
             state=TransactionState.STAGED,
             created_at=_now(),
         )
@@ -203,9 +212,15 @@ def create_app(
             raise HTTPException(404, "Transaction not found")
         if current.state != TransactionState.STAGED:
             raise HTTPException(409, "Reconciled transactions are immutable")
+        group_id = (
+            current.transaction_group_id
+            if request.transaction.transaction_group_id is None
+            else transaction_group_id(request.transaction.transaction_group_id)
+        )
         updated = Transaction(
-            **request.transaction.model_dump(),
+            **request.transaction.model_dump(exclude={"transaction_group_id"}),
             id=current.id,
+            transaction_group_id=group_id,
             state=current.state,
             created_at=current.created_at,
             revision=current.revision + 1,

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from pathlib import Path
+from uuid import uuid4
 
 from .models import Statement, Transaction, TransactionState, Watermark
 
@@ -38,6 +39,20 @@ class Store:
                 );
                 """
             )
+            rows = connection.execute(
+                "SELECT id, document FROM transactions"
+            ).fetchall()
+            for row in rows:
+                document = json.loads(row["document"])
+                if document.get("transaction_group_id") is None:
+                    document["transaction_group_id"] = f"txg_{uuid4().hex}"
+                    connection.execute(
+                        "UPDATE transactions SET document = ? WHERE id = ?",
+                        (
+                            json.dumps(document, separators=(",", ":")),
+                            row["id"],
+                        ),
+                    )
 
     @staticmethod
     def _document(model: Statement | Transaction | Watermark) -> str:
@@ -88,6 +103,17 @@ class Store:
         with self._connect() as connection:
             rows = connection.execute(query, parameters).fetchall()
         return [Transaction.model_validate_json(row["document"]) for row in rows]
+
+    def transaction_group_exists(self, transaction_group_id: str) -> bool:
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT document FROM transactions"
+            ).fetchall()
+        return any(
+            json.loads(row["document"]).get("transaction_group_id")
+            == transaction_group_id
+            for row in rows
+        )
 
     def replace_staged_transaction(
         self, transaction_id: str, expected_revision: int, transaction: Transaction

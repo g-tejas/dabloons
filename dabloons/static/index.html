@@ -114,7 +114,8 @@
       const value = {
         date: transaction.date, payee: transaction.payee, note: transaction.note,
         postings: transaction.postings, statement_id: transaction.statement_id,
-        source_reference: transaction.source_reference
+        source_reference: transaction.source_reference,
+        transaction_group_id: transaction.transaction_group_id
       };
       return `<article class="transaction">
         <header><div><h3>${escapeHtml(transaction.payee)}</h3>
@@ -134,7 +135,7 @@
         `${escapeHtml(p.account)}: ${escapeHtml(p.quantity)} ${escapeHtml(p.commodity)}`
       ).join("<br>");
       return `<article class="transaction"><header><div><h3>${escapeHtml(transaction.payee)}</h3>
-        <span class="meta">${transaction.date} · approved ${transaction.approved_at || ""}</span></div>
+        <span class="meta">${transaction.date} · group ${escapeHtml(transaction.transaction_group_id)} · approved ${transaction.approved_at || ""}</span></div>
         <span class="pill">immutable</span></header><p>${postings}</p></article>`;
     }
 

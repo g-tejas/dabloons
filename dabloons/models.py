@@ -41,6 +41,9 @@ class TransactionInput(BaseModel):
     postings: list[PostingInput] = Field(min_length=2)
     statement_id: str | None = None
     source_reference: str | None = None
+    transaction_group_id: str | None = Field(
+        default=None, pattern=r"^txg_[0-9a-f]{32}$"
+    )
 
     @field_validator("payee")
     @classmethod
@@ -67,6 +70,7 @@ class Transaction(TransactionInput):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
+    transaction_group_id: str = Field(pattern=r"^txg_[0-9a-f]{32}$")
     state: TransactionState
     created_at: datetime
     approved_at: datetime | None = None

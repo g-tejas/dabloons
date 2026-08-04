@@ -10,6 +10,7 @@ The current vertical slice supports:
 
 - format-agnostic statement upload and GPT compilation;
 - manual creation and editing of balanced staged transactions;
+- persistent group IDs for transactions representing the same economic event;
 - individual approval after prospective full-journal hledger validation;
 - immutable reconciled journal batches;
 - user-authorized balance assertions without documentary evidence;

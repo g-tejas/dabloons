@@ -34,6 +34,7 @@ def render_transaction(transaction: Transaction) -> str:
     )
     lines = [f"{transaction.date.isoformat()} * {_single_line(transaction.payee)}"]
     lines.append(f"    ; id: {transaction.id}")
+    lines.append(f"    ; transaction-group: {transaction.transaction_group_id}")
     if transaction.note:
         lines.append(f"    ; note: {_single_line(transaction.note)}")
     if transaction.statement_id:

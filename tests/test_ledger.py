@@ -12,6 +12,7 @@ from dabloons.models import (
 def test_renderer_owns_journal_syntax() -> None:
     transaction = Transaction(
         id="txn_123",
+        transaction_group_id="txg_1234567890abcdef1234567890abcdef",
         date=date(2026, 8, 4),
         payee="Merchant",
         note="Reviewed",
@@ -31,6 +32,7 @@ def test_renderer_owns_journal_syntax() -> None:
         "\n"
         "2026-08-04 * Merchant\n"
         "    ; id: txn_123\n"
+        "    ; transaction-group: txg_1234567890abcdef1234567890abcdef\n"
         "    ; note: Reviewed\n"
         "    expenses:food    4.50 USD\n"
         "    assets:bank:checking    -4.50 USD\n"

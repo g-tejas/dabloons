@@ -94,7 +94,7 @@ Every transaction has exactly one of two application states:
 
 #### Staged
 
-- Generated or proposed by AI.
+- Generated or proposed by AI, or entered manually by a user.
 - Not accounting truth.
 - May be edited, replaced, or deleted.
 - May have multiple immutable candidate revisions.
@@ -793,7 +793,7 @@ Support one representative statement from upload through approval:
 5. deterministic checks;
 6. minimal source/candidate review UI;
 7. human approval;
-8. immutable batch and high watermark;
+8. immutable per-transaction batches and an optional manual high watermark;
 9. REST query of reconciled results.
 
 Do not build dashboards, budgets, or a native phone app before this works reliably.

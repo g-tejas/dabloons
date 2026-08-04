@@ -33,9 +33,9 @@ This is a greenfield design. Migration, backwards compatibility, and reuse of an
 ## 2. Core decisions
 
 1. **Use hledger as the accounting engine.**
-2. **Do not use hledger's CSV import system.** The AI compiler handles statement interpretation and accounting decisions.
+2. **Route every uploaded format through the AI compiler.** Do not use hledger's CSV import system or write deterministic financial parsers for PDF, CSV, or images. An intake adapter may perform lossless format conversion needed by an AI provider, but semantic extraction remains an AI responsibility.
 3. **Expose a domain-specific REST/OpenAPI interface.** Do not expose hledger's internal JSON schema directly to clients.
-4. **Require human approval.** AI confidence can prioritize the review UI but can never bypass approval.
+4. **Require individual human approval.** Every AI-created or manually entered transaction begins staged and must be approved individually. AI confidence can prioritize the review UI but can never bypass approval.
 5. **Use a typed intermediate representation (IR).** AI makes semantic decisions; deterministic code renders journal syntax.
 6. **Keep staged data outside the canonical journal.** Only human-approved transactions become accounting truth.
 7. **Make reconciled transactions immutable.** Corrections and reversals are new transactions.
@@ -164,11 +164,11 @@ No source item may disappear between extraction and approval.
 
 ### 4.4 Reconciliation batch
 
-An atomic human approval event containing:
+An atomic individual human approval event containing:
 
 - reconciliation ID
 - frozen candidate revision hash
-- source statement IDs
+- optional source statement IDs
 - reviewer identity
 - approval time
 - created transactions
@@ -192,7 +192,7 @@ It contains:
 - commodity
 - through date
 - asserted balance
-- source statement
+- optional source statement
 - reconciliation batch
 - preceding watermark
 - approval metadata
@@ -203,11 +203,11 @@ Watermarks are account- and commodity-specific. A bank statement does not establ
 
 1. Watermark dates must move monotonically forward per account and commodity.
 2. A watermark must be backed by an exact hledger balance assertion.
-3. All statement items through the watermark must have an explicit disposition.
-4. The statement's opening balance, movements, and closing balance must be arithmetically consistent.
+3. A user may create a watermark directly from a manually observed balance; documentary evidence is not required.
+4. When a statement is present, its opening balance, movements, and closing balance must be arithmetically consistent.
 5. The candidate journal must produce the asserted closing balance.
-6. No transaction may later be reconciled with a primary accounting date at or before an existing watermark for an affected real-world account.
-7. A watermark confirms net balance completeness, not categorization correctness by itself. Human review and source-item provenance provide the semantic verification.
+6. No promotion may make an existing hledger balance assertion fail.
+7. A watermark confirms net balance completeness, not categorization correctness by itself. Individual human approval provides the semantic verification.
 8. Introducing an old-dated posting that changes a closed balance must fail validation rather than silently changing history.
 
 ## 6. Append-only accounting model
@@ -525,13 +525,15 @@ The reviewer can:
 - mark an item ignored with a required reason;
 - view the exact rendered journal patch;
 - inspect statement arithmetic and resulting balances;
-- approve the frozen statement revision.
+- approve each frozen transaction revision individually.
 
 High confidence reduces visual noise but never skips human approval. Corrections made during review become retrievable examples for future AI runs, not mandatory deterministic import rules.
 
 ## 12. Approval and promotion protocol
 
-Approval is the only transition from staged to reconciled.
+Individual approval is the only transition from staged to reconciled. Reviewing a
+statement can produce many staged transactions, but there is no bulk approval
+operation.
 
 ```text
 mutable staged work
@@ -593,10 +595,7 @@ GET    /v1/staged-transactions/{transactionId}
 PATCH  /v1/staged-transactions/{transactionId}
 DELETE /v1/staged-transactions/{transactionId}
 
-POST   /v1/reconciliations
-GET    /v1/reconciliations/{reconciliationId}
-POST   /v1/reconciliations/{reconciliationId}/approve
-POST   /v1/reconciliations/{reconciliationId}/reject
+POST   /v1/staged-transactions/{transactionId}/approve
 
 GET    /v1/reconciled-transactions
 GET    /v1/reconciled-transactions/{transactionId}
@@ -852,7 +851,6 @@ These should be resolved during Phase 0 without changing the core architecture:
 - hosting and authentication model
 - source-document retention duration
 - exact database and background-job technology
-- whether approval is always statement-wide or can approve smaller batches
 - chart-of-accounts declaration and naming conventions
 - handling of transactions that affect two separately watermarked real-world accounts
 - exact correction-date and reporting policy
@@ -860,4 +858,4 @@ These should be resolved during Phase 0 without changing the core architecture:
 - offline requirements for the eventual phone client
 - whether reviewer corrections should be retrieved as examples automatically or curated first
 
-The default recommendation is statement-wide approval, strict closed-period accounting, explicit declared accounts/commodities, and automatic retrieval of previously approved similar transactions as AI context.
+The default recommendation is individual transaction approval, strict closed-period accounting, explicit declared accounts/commodities, and automatic retrieval of previously approved similar transactions as AI context.

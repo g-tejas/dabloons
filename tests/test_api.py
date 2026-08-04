@@ -182,6 +182,26 @@ def test_transactions_receive_groups_and_can_reuse_an_existing_group(
     assert refund.status_code == 201
     assert refund.json()["transaction_group_id"] == purchase_group
 
+    unrelated_body = unrelated.json()
+    regrouped = api.patch(
+        f"/v1/staged-transactions/{unrelated_body['id']}",
+        json={
+            "expected_revision": unrelated_body["revision"],
+            "transaction": {
+                "date": unrelated_body["date"],
+                "payee": unrelated_body["payee"],
+                "note": unrelated_body["note"],
+                "postings": unrelated_body["postings"],
+                "statement_id": unrelated_body["statement_id"],
+                "source_reference": unrelated_body["source_reference"],
+                "transaction_group_id": purchase_group,
+            },
+        },
+    )
+
+    assert regrouped.status_code == 200
+    assert regrouped.json()["transaction_group_id"] == purchase_group
+
 
 def test_unknown_transaction_group_is_rejected(tmp_path: Path) -> None:
     api = client(tmp_path)

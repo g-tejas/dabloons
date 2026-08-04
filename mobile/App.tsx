@@ -119,7 +119,7 @@ function FinanceApp() {
         </BlurView>
       </View>
 
-      <Animated.View pointerEvents="none" style={[styles.toast, { transform: [{ translateY: toastY }] }]}>
+      <Animated.View style={[styles.toast, { pointerEvents: 'none', transform: [{ translateY: toastY }] }]}>
         <Ionicons color={colors.background} name="checkmark-circle" size={18} />
         <Text numberOfLines={1} style={styles.toastText}>{toast}</Text>
       </Animated.View>
@@ -145,6 +145,7 @@ function FinanceApp() {
                 accessibilityLabel="Transaction amount"
                 autoFocus
                 keyboardType="decimal-pad"
+                nativeID="transaction-amount"
                 onChangeText={setAmount}
                 placeholder="0.00"
                 placeholderTextColor={colors.subtle}
@@ -167,6 +168,8 @@ function FinanceApp() {
             </View>
             <Text style={styles.inputLabel}>NOTE</Text>
             <TextInput
+              accessibilityLabel="Transaction note"
+              nativeID="transaction-note"
               onChangeText={setNote}
               placeholder="What was this for?"
               placeholderTextColor={colors.subtle}

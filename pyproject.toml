@@ -1,0 +1,30 @@
+[project]
+name = "dabloons"
+version = "0.1.0"
+description = "AI-assisted, human-approved personal accounting"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "openai",
+    "python-multipart",
+    "uvicorn[standard]",
+]
+
+[project.optional-dependencies]
+dev = [
+    "httpx",
+    "pytest",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["dabloons*"]
+
+[tool.setuptools.package-data]
+dabloons = ["static/*.html"]

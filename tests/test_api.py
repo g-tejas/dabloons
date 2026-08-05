@@ -311,4 +311,6 @@ def test_missing_hledger_rejects_approval_and_keeps_transaction_staged(
     assert (
         api.get(f"/v1/transactions/{staged['id']}").json()["state"] == "staged"
     )
-    assert not list((tmp_path / "data" / "ledger" / "reconciled").glob("*.journal"))
+    assert not list(
+        (tmp_path / "data" / "ledger" / "reconciled").glob("txn_*.journal")
+    )

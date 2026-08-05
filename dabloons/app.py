@@ -220,16 +220,20 @@ def create_app(
             created_at=current.created_at,
             revision=current.revision + 1,
         )
-        if not store.replace_staged_transaction(
-            transaction_id, request.expected_revision, updated
-        ):
-            raise HTTPException(409, "Staged transaction changed; reload and try again")
+        with promotion_lock:
+            if not store.replace_staged_transaction(
+                transaction_id, request.expected_revision, updated
+            ):
+                raise HTTPException(
+                    409, "Staged transaction changed; reload and try again"
+                )
         return updated
 
     @app.delete("/v1/staged-transactions/{transaction_id}", status_code=204)
     def delete_staged_transaction(transaction_id: str) -> None:
-        if not store.delete_staged_transaction(transaction_id):
-            raise HTTPException(404, "Editable staged transaction not found")
+        with promotion_lock:
+            if not store.delete_staged_transaction(transaction_id):
+                raise HTTPException(404, "Editable staged transaction not found")
 
     @app.post(
         "/v1/staged-transactions/{transaction_id}/approve",

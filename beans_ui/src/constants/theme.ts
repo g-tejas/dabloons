@@ -102,8 +102,8 @@ export const Radius = {
   pill: 999,
 } as const;
 
-// UIKit automatically gives native-tab scroll views their final resting inset.
-// Adding the bar height again creates an opaque gap and prevents content from
-// visibly passing beneath Liquid Glass while scrolling.
-export const BottomTabInset = Platform.select({ ios: 0, android: 96, web: 84 }) ?? 84;
+// This is content padding, not a scroll-view safe-area inset. The iOS scroll
+// view itself extends beneath the tab bar; this trailing space only lets the
+// final row scroll fully above the glass when the user reaches the end.
+export const BottomTabInset = Platform.select({ ios: 72, android: 96, web: 84 }) ?? 84;
 export const MaxContentWidth = 760;

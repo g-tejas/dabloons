@@ -1,7 +1,21 @@
-import { Badge, Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
+import {
+  Badge,
+  Icon,
+  Label,
+  NativeTabs,
+  type NativeTabOptions,
+} from 'expo-router/unstable-native-tabs';
 import { DynamicColorIOS, Platform, useColorScheme } from 'react-native';
 
 import { Colors } from '@/constants/theme';
+
+type UnderlappingTabOptions = NativeTabOptions & {
+  overrideScrollViewContentInsetAdjustmentBehavior: boolean;
+};
+
+const underlappingTabOptions: UnderlappingTabOptions = {
+  overrideScrollViewContentInsetAdjustmentBehavior: false,
+};
 
 export default function AppTabs() {
   const scheme = useColorScheme() ?? 'light';
@@ -18,7 +32,7 @@ export default function AppTabs() {
       labelStyle={{ color: systemLabel, fontSize: 10 }}
       minimizeBehavior="onScrollDown"
       tintColor={Platform.OS === 'ios' ? systemLabel : colors.accent}>
-      <NativeTabs.Trigger name="(overview)">
+      <NativeTabs.Trigger name="(overview)" options={underlappingTabOptions}>
         <Label>Overview</Label>
         <Icon
           androidSrc={require('@/assets/images/tabIcons/home.png')}
@@ -26,7 +40,7 @@ export default function AppTabs() {
         />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="(reconcile)">
+      <NativeTabs.Trigger name="(reconcile)" options={underlappingTabOptions}>
         <Label>Reconcile</Label>
         <Icon
           androidSrc={require('@/assets/images/tabIcons/explore.png')}

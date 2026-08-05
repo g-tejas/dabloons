@@ -1,11 +1,12 @@
 import * as Haptics from 'expo-haptics';
 import { Stack } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, useColorScheme, View } from 'react-native';
 
 import { AnimatedNumber } from '@/components/finance/animated-number';
 import { CategoryPill } from '@/components/finance/category-pill';
 import { InsetGroup } from '@/components/finance/inset-group';
+import { NativeTabScrollView } from '@/components/finance/native-tab-scroll-view';
 import { SectionHeader } from '@/components/finance/section-header';
 import { SystemIcon } from '@/components/finance/system-icon';
 import { TrendChart } from '@/components/finance/trend-chart';
@@ -89,9 +90,7 @@ export default function OverviewScreen() {
           ),
         }}
       />
-      <ScrollView
-        automaticallyAdjustsScrollIndicatorInsets
-        contentInsetAdjustmentBehavior="automatic"
+      <NativeTabScrollView
         contentContainerStyle={[styles.content, { paddingBottom: BottomTabInset + Spacing.six }]}
         style={{ backgroundColor: theme.background }}
         showsVerticalScrollIndicator={false}>
@@ -311,7 +310,7 @@ export default function OverviewScreen() {
             <SystemIcon color={theme.textTertiary} fallback="chevron-right" name="chevron.right" size={12} />
           </Pressable>
         </InsetGroup>
-      </ScrollView>
+      </NativeTabScrollView>
     </>
   );
 }

@@ -98,14 +98,14 @@ export function TrendChart({
       onResponderMove={(event) => selectAt(event.nativeEvent.locationX)}
       onStartShouldSetResponder={() => true}
       style={styles.container}>
-      {selectedPoint && (
+      {selectedIndex !== null && selectedPoint && (
         <View
-          pointerEvents="none"
           style={[
             styles.tooltip,
             {
               backgroundColor: color,
               left: Math.max(0, Math.min(width - TOOLTIP_WIDTH, selectedPoint.x - TOOLTIP_WIDTH / 2)),
+              pointerEvents: 'none',
             },
           ]}>
           <Text numberOfLines={1} style={styles.tooltipText}>

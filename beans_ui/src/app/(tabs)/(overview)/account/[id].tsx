@@ -34,7 +34,9 @@ export default function AccountDetailScreen() {
   );
 
   const history = useMemo(() => {
-    const base = accountHistory[id] ?? [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, account?.balance ?? 0];
+    const base =
+      accountHistory[account?.id ?? id] ??
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, account?.balance ?? 0];
     const multipliers: Record<Period, number> = { '1M': 1, '3M': 1.035, '6M': 1.07, '1Y': 1.12 };
     const multiplier = multipliers[period];
     return base.map((value, index) => value - (base.length - 1 - index) * (multiplier - 1) * 210);

@@ -31,6 +31,14 @@ export default function RootLayout() {
         <AnimatedSplashOverlay />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen
+            name="transaction/new"
+            options={{
+              animation: 'slide_from_bottom',
+              gestureEnabled: true,
+              presentation: 'fullScreenModal',
+            }}
+          />
         </Stack>
       </LedgerProvider>
     </ThemeProvider>

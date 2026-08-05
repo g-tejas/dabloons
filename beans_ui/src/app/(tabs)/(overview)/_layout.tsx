@@ -34,15 +34,6 @@ export default function OverviewStackLayout() {
           title: 'Account',
         }}
       />
-      <Stack.Screen
-        name="transaction/new"
-        options={{
-          animation: 'slide_from_bottom',
-          headerBackTitle: 'Cancel',
-          headerLargeTitle: false,
-          title: 'New Transaction',
-        }}
-      />
     </Stack>
   );
 }

@@ -1,22 +1,18 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import mimetypes
 import os
-import sqlite3
 import tempfile
 import threading
 from datetime import UTC, datetime
 from pathlib import Path
-from uuid import uuid4
 
 from .ledger import (
     Hledger,
     parse_transaction,
     parse_watermark,
     render_transaction,
-    render_watermark,
 )
 from .models import Statement, Transaction, TransactionState, Watermark
 
@@ -28,7 +24,6 @@ class Store:
         self.sources = root / "sources"
         self.sources.mkdir(parents=True, exist_ok=True)
         self._write_lock = threading.Lock()
-        self._migrate_sqlite()
         self._recover_promotions()
 
     @staticmethod
@@ -210,70 +205,3 @@ class Store:
         for staged in self.ledger.staged.glob("txn_*.journal"):
             if (self.ledger.batches / staged.name).exists():
                 staged.unlink()
-
-    @staticmethod
-    def _table_exists(connection: sqlite3.Connection, table: str) -> bool:
-        return (
-            connection.execute(
-                "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
-                (table,),
-            ).fetchone()
-            is not None
-        )
-
-    def _migrate_sqlite(self) -> None:
-        database = self.root / "dabloons.sqlite3"
-        if not database.exists():
-            return
-        with sqlite3.connect(database) as connection:
-            connection.row_factory = sqlite3.Row
-            if self._table_exists(connection, "statements"):
-                for row in connection.execute(
-                    "SELECT id, document FROM statements"
-                ).fetchall():
-                    statement = Statement.model_validate_json(row["document"])
-                    old_source = self.sources / statement.id
-                    if old_source.is_file():
-                        temporary = self.sources / f".{statement.id}.migration"
-                        old_source.replace(temporary)
-                        old_source.mkdir()
-                        temporary.replace(
-                            old_source / self._safe_filename(statement.filename)
-                        )
-            if self._table_exists(connection, "transactions"):
-                for row in connection.execute(
-                    "SELECT id, document FROM transactions"
-                ).fetchall():
-                    document = json.loads(row["document"])
-                    if "statement_description" not in document and "payee" in document:
-                        document["statement_description"] = document.pop("payee")
-                    document.pop("source_reference", None)
-                    document.setdefault(
-                        "transaction_group_id", f"txg_{uuid4().hex}"
-                    )
-                    transaction = Transaction.model_validate(document)
-                    filename = f"{transaction.id}.journal"
-                    if transaction.state == TransactionState.STAGED:
-                        destination = self.ledger.staged / filename
-                        if not destination.exists():
-                            self._atomic_write(
-                                destination, render_transaction(transaction)
-                            )
-                    else:
-                        destination = self.ledger.batches / filename
-                        if not destination.exists():
-                            self.ledger.commit_batch(
-                                transaction.id, render_transaction(transaction)
-                            )
-            if self._table_exists(connection, "watermarks"):
-                for row in connection.execute(
-                    "SELECT id, document FROM watermarks"
-                ).fetchall():
-                    watermark = Watermark.model_validate_json(row["document"])
-                    if not (self.ledger.batches / f"{watermark.id}.journal").exists():
-                        self.ledger.commit_batch(
-                            watermark.id, render_watermark(watermark)
-                        )
-        database.unlink()
-        for suffix in ("-wal", "-shm"):
-            Path(f"{database}{suffix}").unlink(missing_ok=True)

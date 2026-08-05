@@ -1,68 +1,49 @@
-import json
-import sqlite3
+from datetime import UTC, date, datetime
 
-from dabloons.ledger import Hledger
+from dabloons.ledger import Hledger, render_transaction
+from dabloons.models import PostingInput, Transaction, TransactionState
 from dabloons.store import Store
 
 
-def test_store_migrates_existing_transactions(tmp_path) -> None:
-    database = tmp_path / "dabloons.sqlite3"
-    with sqlite3.connect(database) as connection:
-        connection.execute(
-            """
-            CREATE TABLE transactions (
-                id TEXT PRIMARY KEY,
-                state TEXT NOT NULL,
-                document TEXT NOT NULL
-            )
-            """
-        )
-        connection.execute(
-            "INSERT INTO transactions (id, state, document) VALUES (?, ?, ?)",
-            (
-                "txn_existing",
-                "reconciled",
-                json.dumps(
-                    {
-                        "id": "txn_existing",
-                        "date": "2026-08-01",
-                        "payee": "Existing purchase",
-                        "note": "",
-                        "postings": [
-                            {
-                                "account": "expenses:misc",
-                                "commodity": "USD",
-                                "quantity": "1.00",
-                            },
-                            {
-                                "account": "assets:bank:checking",
-                                "commodity": "USD",
-                                "quantity": "-1.00",
-                            },
-                        ],
-                        "statement_id": None,
-                        "source_reference": None,
-                        "state": "reconciled",
-                        "created_at": "2026-08-01T00:00:00Z",
-                        "approved_at": "2026-08-01T00:01:00Z",
-                        "revision": 1,
-                    }
-                ),
+def test_store_recovers_a_committed_journal_after_interrupted_approval(
+    tmp_path,
+) -> None:
+    ledger = Hledger(tmp_path / "ledger")
+    store = Store(tmp_path, ledger)
+    transaction = Transaction(
+        id="txn_existing",
+        transaction_group_id="txg_1234567890abcdef1234567890abcdef",
+        date=date(2026, 8, 1),
+        statement_description="CARD PURCHASE",
+        note="Existing purchase",
+        postings=[
+            PostingInput(
+                account="expenses:misc", commodity="USD", quantity="1.00"
             ),
-        )
+            PostingInput(
+                account="assets:bank:checking",
+                commodity="USD",
+                quantity="-1.00",
+            ),
+        ],
+        state=TransactionState.STAGED,
+        created_at=datetime(2026, 8, 1, tzinfo=UTC),
+    )
+    store.create_transaction(transaction)
 
-    store = Store(tmp_path, Hledger(tmp_path / "ledger"))
-    transaction = store.get_transaction("txn_existing")
-    first_group = transaction.transaction_group_id
+    staged = tmp_path / "ledger" / "staged" / "txn_existing.journal"
+    assert "2026-08-01 ! CARD PURCHASE" in staged.read_text()
+    assert store.get_transaction(transaction.id) == transaction
 
-    assert first_group.startswith("txg_")
-    assert transaction.statement_description == "Existing purchase"
-    assert transaction.state == "reconciled"
-    journal = tmp_path / "ledger" / "reconciled" / "txn_existing.journal"
-    assert journal.exists()
-    assert "2026-08-01 * Existing purchase" in journal.read_text()
-    assert "payee" not in journal.read_text()
-    assert "source-ref" not in journal.read_text()
-    assert not database.exists()
-    reloaded = Store(tmp_path, Hledger(tmp_path / "ledger"))
-    assert reloaded.get_transaction("txn_existing").transaction_group_id == first_group
+    approved = transaction.model_copy(
+        update={
+            "state": TransactionState.RECONCILED,
+            "approved_at": datetime(2026, 8, 1, 0, 1, tzinfo=UTC),
+        }
+    )
+    ledger.commit_batch(approved.id, render_transaction(approved))
+
+    recovered = Store(tmp_path, Hledger(tmp_path / "ledger"))
+
+    assert not staged.exists()
+    assert recovered.get_transaction(transaction.id) == approved

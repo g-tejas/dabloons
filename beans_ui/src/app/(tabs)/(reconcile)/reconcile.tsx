@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 
+import { AnimatedNumber } from '@/components/finance/animated-number';
 import { CategoryPill } from '@/components/finance/category-pill';
 import { InsetGroup } from '@/components/finance/inset-group';
 import { SectionHeader } from '@/components/finance/section-header';
@@ -89,7 +90,12 @@ export default function ReconcileScreen() {
               </Text>
             </View>
             <View style={[styles.readyBadge, { backgroundColor: theme.warningSoft }]}>
-              <Text style={[styles.readyValue, { color: theme.warning }]}>{completion}%</Text>
+              <AnimatedNumber
+                duration={350}
+                formatter={(value) => `${Math.round(value)}%`}
+                style={[styles.readyValue, { color: theme.warning }]}
+                value={completion}
+              />
               <Text style={[styles.readyLabel, { color: theme.warning }]}>READY</Text>
             </View>
           </View>
@@ -226,7 +232,13 @@ export default function ReconcileScreen() {
           ) : (
             <InsetGroup style={styles.emptyState}>
               <View style={[styles.emptyIcon, { backgroundColor: theme.positiveSoft }]}>
-                <SystemIcon color={theme.positive} fallback="done-all" name="checkmark.circle.fill" size={30} />
+                <SystemIcon
+                  animationSpec={{ effect: { type: 'bounce' } }}
+                  color={theme.positive}
+                  fallback="done-all"
+                  name="checkmark.circle.fill"
+                  size={30}
+                />
               </View>
               <Text style={[styles.emptyTitle, { color: theme.text }]}>Nothing to review</Text>
               <Text style={[styles.emptyDetail, { color: theme.textSecondary }]}>

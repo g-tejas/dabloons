@@ -16,7 +16,7 @@ def test_existing_watermark_rejects_an_old_dated_promotion(tmp_path: Path) -> No
         "/v1/staged-transactions",
         json={
             "date": "2026-08-01",
-            "payee": "Opening balance",
+            "statement_description": "Opening balance",
             "postings": [
                 {
                     "account": "assets:bank:checking",
@@ -52,7 +52,7 @@ def test_existing_watermark_rejects_an_old_dated_promotion(tmp_path: Path) -> No
         "/v1/staged-transactions",
         json={
             "date": "2026-08-02",
-            "payee": "Late old expense",
+            "statement_description": "Late old expense",
             "postings": [
                 {
                     "account": "assets:bank:checking",

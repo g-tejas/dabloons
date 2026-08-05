@@ -52,7 +52,7 @@
       <h2>2. Add a manual staged transaction</h2>
       <form id="manual-form">
         <label>Date<input id="manual-date" type="date" required></label>
-        <label>Bank statement text<input id="manual-payee" placeholder="APPLE.COM/BILL" required></label>
+        <label>Bank statement text<input id="manual-statement-description" placeholder="APPLE.COM/BILL" required></label>
         <label>Meaning / note<input id="manual-note" placeholder="iPad purchase"></label>
         <label>Amount<input id="manual-amount" type="number" step="0.01" required></label>
         <label>From account<input id="manual-from" value="assets:bank:checking" required></label>
@@ -113,12 +113,13 @@
 
     function editable(transaction) {
       const value = {
-        date: transaction.date, payee: transaction.payee, note: transaction.note,
+        date: transaction.date, statement_description: transaction.statement_description,
+        note: transaction.note,
         postings: transaction.postings, statement_id: transaction.statement_id,
         transaction_group_id: transaction.transaction_group_id
       };
       return `<article class="transaction">
-        <header><div><h3>${escapeHtml(transaction.payee)}</h3>
+        <header><div><h3>${escapeHtml(transaction.statement_description)}</h3>
         <span class="meta">${transaction.date} · revision ${transaction.revision}</span></div>
         <span class="pill">needs your approval</span></header>
         <textarea id="edit-${transaction.id}">${escapeHtml(JSON.stringify(value, null, 2))}</textarea>
@@ -134,7 +135,7 @@
       const postings = transaction.postings.map(p =>
         `${escapeHtml(p.account)}: ${escapeHtml(p.quantity)} ${escapeHtml(p.commodity)}`
       ).join("<br>");
-      return `<article class="transaction"><header><div><h3>${escapeHtml(transaction.payee)}</h3>
+      return `<article class="transaction"><header><div><h3>${escapeHtml(transaction.statement_description)}</h3>
         <span class="meta">${transaction.date} · group ${escapeHtml(transaction.transaction_group_id)} · approved ${transaction.approved_at || ""}</span></div>
         <span class="pill">immutable</span></header><p>${postings}</p></article>`;
     }
@@ -207,7 +208,8 @@
         await api("/v1/staged-transactions", {
           method:"POST", headers:{"Content-Type":"application/json"},
           body:JSON.stringify({
-            date:$("manual-date").value, payee:$("manual-payee").value,
+            date:$("manual-date").value,
+            statement_description:$("manual-statement-description").value,
             note:$("manual-note").value,
             postings:[
               {account:$("manual-from").value, commodity:$("manual-commodity").value, quantity:`-${amount}`},

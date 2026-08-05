@@ -310,7 +310,8 @@ Input context should include only relevant information:
 
 The AI decides:
 
-- exact bank-statement text for `payee` and a concise semantic meaning for `note`
+- exact bank-statement text for `statement_description` and a concise semantic
+  meaning for `note`
 - counteraccount selection
 - transfer recognition
 - refund and reversal treatment
@@ -394,7 +395,7 @@ A representative compiled item:
     "id": "txn_01J...",
     "date": "2026-07-02",
     "status": "staged",
-    "payee": "VISA PURCHASE APPLE STORE 0702",
+    "statement_description": "VISA PURCHASE APPLE STORE 0702",
     "note": "iPad purchase",
     "postings": [
       {
@@ -507,7 +508,7 @@ The primary UI is a source-to-ledger review workspace.
 ```text
 +--------------------------+-----------------------------+
 | Original statement       | Candidate transaction       |
-| Page, image, or CSV grid | Date, payee, and postings   |
+| Page, image, or CSV grid | Date, statement description, and postings |
 | Highlight source item    | Amount, account, warnings   |
 +--------------------------+-----------------------------+
 | Opening | Debits | Credits | Closing | Difference      |
@@ -519,7 +520,7 @@ The reviewer can:
 - navigate source items;
 - see the corresponding candidate immediately;
 - inspect AI confidence and critic warnings;
-- edit date, payee, note, amount, commodity, or account;
+- edit date, statement description, note, amount, commodity, or account;
 - split or merge items;
 - match an item to an existing reconciled transaction;
 - match or replace a staged manual transaction;

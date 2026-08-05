@@ -16,7 +16,7 @@ class FakeCompiler:
             transactions=[
                 AITransaction(
                     date="2026-08-01",
-                    payee="Coffee",
+                    statement_description="Coffee",
                     note="Coffee purchase",
                     postings=[
                         PostingInput(
@@ -70,13 +70,13 @@ def test_upload_compile_edit_and_individually_approve(tmp_path: Path) -> None:
     assert compiled.status_code == 200
     staged = compiled.json()["transactions"][0]
     assert staged["state"] == "staged"
-    assert staged["payee"] == "Coffee"
+    assert staged["statement_description"] == "Coffee"
     assert staged["note"] == "Coffee purchase"
     assert "source_reference" not in staged
 
     edited = {
         "date": staged["date"],
-        "payee": "Neighborhood Coffee",
+        "statement_description": "Neighborhood Coffee",
         "note": "Reviewed manually",
         "postings": staged["postings"],
         "statement_id": staged["statement_id"],
@@ -110,7 +110,7 @@ def test_manual_transaction_must_balance(tmp_path: Path) -> None:
         "/v1/staged-transactions",
         json={
             "date": "2026-08-01",
-            "payee": "Broken entry",
+            "statement_description": "Broken entry",
             "postings": [
                 {
                     "account": "assets:bank:checking",
@@ -134,7 +134,7 @@ def test_transactions_receive_groups_and_can_reuse_an_existing_group(
     api = client(tmp_path)
     transaction = {
         "date": "2026-08-01",
-        "payee": "Tablet",
+        "statement_description": "Tablet",
         "postings": [
             {
                 "account": "expenses:electronics",
@@ -152,7 +152,7 @@ def test_transactions_receive_groups_and_can_reuse_an_existing_group(
     purchase = api.post("/v1/staged-transactions", json=transaction)
     unrelated = api.post(
         "/v1/staged-transactions",
-        json={**transaction, "payee": "Another purchase"},
+        json={**transaction, "statement_description": "Another purchase"},
     )
 
     assert purchase.status_code == 201
@@ -165,7 +165,7 @@ def test_transactions_receive_groups_and_can_reuse_an_existing_group(
         "/v1/staged-transactions",
         json={
             **transaction,
-            "payee": "Tablet refund",
+            "statement_description": "Tablet refund",
             "transaction_group_id": purchase_group,
             "postings": [
                 {
@@ -192,7 +192,7 @@ def test_transactions_receive_groups_and_can_reuse_an_existing_group(
             "expected_revision": unrelated_body["revision"],
             "transaction": {
                 "date": unrelated_body["date"],
-                "payee": unrelated_body["payee"],
+                "statement_description": unrelated_body["statement_description"],
                 "note": unrelated_body["note"],
                 "postings": unrelated_body["postings"],
                 "statement_id": unrelated_body["statement_id"],
@@ -211,7 +211,7 @@ def test_unknown_transaction_group_is_rejected(tmp_path: Path) -> None:
         "/v1/staged-transactions",
         json={
             "date": "2026-08-01",
-            "payee": "Unknown group",
+            "statement_description": "Unknown group",
             "transaction_group_id": "txg_1234567890abcdef1234567890abcdef",
             "postings": [
                 {
@@ -275,7 +275,7 @@ def test_missing_hledger_rejects_approval_and_keeps_transaction_staged(
         "/v1/staged-transactions",
         json={
             "date": "2026-08-04",
-            "payee": "Safe failure",
+            "statement_description": "Safe failure",
             "postings": [
                 {
                     "account": "assets:bank:checking",

@@ -44,8 +44,20 @@ class Store:
             ).fetchall()
             for row in rows:
                 document = json.loads(row["document"])
+                changed = False
+                if (
+                    document.get("statement_description") is None
+                    and "payee" in document
+                ):
+                    document["statement_description"] = document.pop("payee")
+                    changed = True
+                if "source_reference" in document:
+                    document.pop("source_reference")
+                    changed = True
                 if document.get("transaction_group_id") is None:
                     document["transaction_group_id"] = f"txg_{uuid4().hex}"
+                    changed = True
+                if changed:
                     connection.execute(
                         "UPDATE transactions SET document = ? WHERE id = ?",
                         (

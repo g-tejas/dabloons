@@ -32,7 +32,10 @@ def render_transaction(transaction: Transaction) -> str:
         {posting.account for posting in transaction.postings},
         {posting.commodity for posting in transaction.postings},
     )
-    lines = [f"{transaction.date.isoformat()} * {_single_line(transaction.payee)}"]
+    lines = [
+        f"{transaction.date.isoformat()} * "
+        f"{_single_line(transaction.statement_description)}"
+    ]
     lines.append(f"    ; id: {transaction.id}")
     lines.append(f"    ; transaction-group: {transaction.transaction_group_id}")
     if transaction.note:

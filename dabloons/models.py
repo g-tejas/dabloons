@@ -36,7 +36,7 @@ class PostingInput(BaseModel):
 
 class TransactionInput(BaseModel):
     date: date
-    payee: str = Field(
+    statement_description: str = Field(
         min_length=1,
         description="Exact transaction description shown on the bank statement",
     )
@@ -50,9 +50,9 @@ class TransactionInput(BaseModel):
         default=None, pattern=r"^txg_[0-9a-f]{32}$"
     )
 
-    @field_validator("payee")
+    @field_validator("statement_description")
     @classmethod
-    def strip_payee(cls, value: str) -> str:
+    def strip_statement_description(cls, value: str) -> str:
         value = value.strip()
         if not value:
             raise ValueError("must not be blank")
@@ -114,7 +114,7 @@ class Watermark(WatermarkInput):
 
 class AITransaction(BaseModel):
     date: date
-    payee: str = Field(
+    statement_description: str = Field(
         description="Exact transaction description shown on the bank statement"
     )
     note: str = Field(

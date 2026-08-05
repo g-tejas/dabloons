@@ -14,7 +14,7 @@ def test_renderer_owns_journal_syntax() -> None:
         id="txn_123",
         transaction_group_id="txg_1234567890abcdef1234567890abcdef",
         date=date(2026, 8, 4),
-        payee="Merchant",
+        statement_description="Merchant",
         note="Reviewed",
         postings=[
             PostingInput(account="expenses:food", commodity="USD", quantity="4.50"),

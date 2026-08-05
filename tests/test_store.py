@@ -4,7 +4,7 @@ import sqlite3
 from dabloons.store import Store
 
 
-def test_store_assigns_groups_to_existing_transactions(tmp_path) -> None:
+def test_store_migrates_existing_transactions(tmp_path) -> None:
     path = tmp_path / "dabloons.sqlite3"
     with sqlite3.connect(path) as connection:
         connection.execute(
@@ -51,7 +51,18 @@ def test_store_assigns_groups_to_existing_transactions(tmp_path) -> None:
         )
 
     store = Store(path)
-    first_group = store.get_transaction("txn_existing").transaction_group_id
+    transaction = store.get_transaction("txn_existing")
+    first_group = transaction.transaction_group_id
 
     assert first_group.startswith("txg_")
+    assert transaction.statement_description == "Existing purchase"
     assert Store(path).get_transaction("txn_existing").transaction_group_id == first_group
+    with sqlite3.connect(path) as connection:
+        document = json.loads(
+            connection.execute(
+                "SELECT document FROM transactions WHERE id = ?",
+                ("txn_existing",),
+            ).fetchone()[0]
+        )
+    assert "payee" not in document
+    assert "source_reference" not in document

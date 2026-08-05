@@ -44,7 +44,20 @@ export const overview = {
   savingsRate: 28,
 };
 
-export const netWorthTrend = [42, 46, 43, 51, 56, 54, 62, 66, 64, 72, 77, 82];
+export const netWorthTrend = [
+  42180.24,
+  43240.58,
+  42985.16,
+  44710.83,
+  45282.4,
+  45040.12,
+  46195.76,
+  46840.22,
+  46590.68,
+  47420.36,
+  48018.9,
+  48620.42,
+];
 
 export const budgets: BudgetCategory[] = [
   {

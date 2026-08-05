@@ -102,5 +102,8 @@ export const Radius = {
   pill: 999,
 } as const;
 
-export const BottomTabInset = Platform.select({ ios: 72, android: 96, web: 84 }) ?? 84;
+// UIKit automatically gives native-tab scroll views their final resting inset.
+// Adding the bar height again creates an opaque gap and prevents content from
+// visibly passing beneath Liquid Glass while scrolling.
+export const BottomTabInset = Platform.select({ ios: 0, android: 96, web: 84 }) ?? 84;
 export const MaxContentWidth = 760;

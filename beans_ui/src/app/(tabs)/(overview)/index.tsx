@@ -54,7 +54,8 @@ const accounts: {
   },
 ];
 
-const cashFlowTrend = [58, 34, 68, 44, 74, 51, 62, 38, 70, 49, 77, 56];
+const cashFlowTrend = [3054, 2180, 3470, 2560, 3820, 2910, 3260, 2260, 3610, 2820, 4010, 2980];
+const chartLabels = ['Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'];
 
 export default function OverviewScreen() {
   const scheme = useColorScheme() ?? 'light';
@@ -160,6 +161,8 @@ export default function OverviewScreen() {
             key={chartMode}
             accessibilityLabel={`${chartMode} trend from September through August`}
             color={chartMode === 'Net Worth' ? theme.accent : theme.positive}
+            formatValue={formatMoney}
+            labels={chartLabels}
             values={chartMode === 'Net Worth' ? netWorthTrend : cashFlowTrend}
           />
           <View style={styles.axis}>

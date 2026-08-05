@@ -2,10 +2,11 @@ import { BlurView } from 'expo-blur';
 import {
   GlassView,
   isGlassEffectAPIAvailable,
-  isLiquidGlassAvailable,
 } from 'expo-glass-effect';
 import { Tabs } from 'expo-router';
-import { Platform, StyleSheet, useColorScheme, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { Platform, Pressable, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { SystemIcon } from '@/components/finance/system-icon';
@@ -14,26 +15,16 @@ import { Colors } from '@/constants/theme';
 export default function AppTabs() {
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
-  const insets = useSafeAreaInsets();
 
   return (
     <Tabs
       safeAreaInsets={{ bottom: 0 }}
+      tabBar={(props) => <FloatingGlassTabBar {...props} />}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.accent,
-        tabBarBackground: () => <GlassTabBarBackground />,
         tabBarHideOnKeyboard: true,
         tabBarInactiveTintColor: colors.textSecondary,
-        tabBarItemStyle: styles.tabItem,
-        tabBarLabelStyle: styles.tabLabel,
-        tabBarStyle: [
-          styles.tabBar,
-          {
-            bottom: Math.max(insets.bottom, 10),
-            shadowColor: scheme === 'dark' ? '#000000' : '#536070',
-          },
-        ],
       }}>
       <Tabs.Screen
         name="(overview)"
@@ -56,7 +47,6 @@ export default function AppTabs() {
         options={{
           tabBarAccessibilityLabel: 'Reconcile',
           tabBarBadge: 5,
-          tabBarBadgeStyle: styles.badge,
           tabBarIcon: ({ color, focused }) => (
             <SystemIcon
               color={color}
@@ -73,78 +63,153 @@ export default function AppTabs() {
   );
 }
 
-function GlassTabBarBackground() {
+function FloatingGlassTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const scheme = useColorScheme() ?? 'light';
-  const nativeGlass =
-    Platform.OS === 'ios' &&
-    isGlassEffectAPIAvailable() &&
-    isLiquidGlassAvailable();
+  const theme = Colors[scheme];
+  const insets = useSafeAreaInsets();
+  const nativeGlass = Platform.OS === 'ios' && isGlassEffectAPIAvailable();
+  const buttons = state.routes.map((route, index) => {
+    const options = descriptors[route.key].options;
+    const focused = state.index === index;
+    const color = focused ? theme.accent : theme.textSecondary;
+    const label =
+      typeof options.tabBarLabel === 'string'
+        ? options.tabBarLabel
+        : options.title ?? route.name;
+
+    return (
+      <Pressable
+        accessibilityLabel={options.tabBarAccessibilityLabel}
+        accessibilityRole="button"
+        accessibilityState={focused ? { selected: true } : {}}
+        key={route.key}
+        onPress={() => {
+          const event = navigation.emit({
+            canPreventDefault: true,
+            target: route.key,
+            type: 'tabPress',
+          });
+          if (!focused && !event.defaultPrevented) {
+            void Haptics.selectionAsync();
+            navigation.navigate(route.name, route.params);
+          }
+        }}
+        onLongPress={() =>
+          navigation.emit({
+            target: route.key,
+            type: 'tabLongPress',
+          })
+        }
+        style={({ pressed }) => [
+          styles.tabButton,
+          focused && { backgroundColor: theme.accentSoft },
+          pressed && styles.tabButtonPressed,
+        ]}>
+        <View style={styles.iconWrap}>
+          {options.tabBarIcon?.({ color, focused, size: 20 })}
+          {options.tabBarBadge != null && (
+            <View style={[styles.badge, { backgroundColor: theme.danger }]}>
+              <Text style={styles.badgeText}>{String(options.tabBarBadge)}</Text>
+            </View>
+          )}
+        </View>
+        <Text style={[styles.tabLabel, { color }]}>{label}</Text>
+      </Pressable>
+    );
+  });
 
   return (
-    <View style={styles.glassBackground}>
+    <View
+      pointerEvents="box-none"
+      style={[
+        styles.tabBarWrap,
+        {
+          bottom: Math.max(insets.bottom, 10),
+          shadowColor: scheme === 'dark' ? '#000000' : '#536070',
+        },
+      ]}>
       {nativeGlass ? (
         <GlassView
-          glassEffectStyle="regular"
-          style={StyleSheet.absoluteFill}
-          tintColor={scheme === 'dark' ? 'rgba(22,22,24,0.22)' : 'rgba(255,255,255,0.18)'}
-        />
+          glassEffectStyle="clear"
+          isInteractive
+          style={styles.glassBar}>
+          {buttons}
+        </GlassView>
       ) : (
         <BlurView
           intensity={78}
-          style={StyleSheet.absoluteFill}
-          tint={scheme === 'dark' ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight'}
-        />
+          style={[
+            styles.glassBar,
+            {
+              backgroundColor:
+                scheme === 'dark' ? 'rgba(24,24,26,0.42)' : 'rgba(255,255,255,0.42)',
+              borderColor: theme.glassBorder,
+            },
+          ]}
+          tint={scheme === 'dark' ? 'systemUltraThinMaterialDark' : 'systemUltraThinMaterialLight'}>
+          {buttons}
+        </BlurView>
       )}
-      <View
-        pointerEvents="none"
-        style={[
-          StyleSheet.absoluteFill,
-          styles.glassBorder,
-          {
-            borderColor:
-              scheme === 'dark' ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.72)',
-          },
-        ]}
-      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   badge: {
-    fontSize: 9,
+    alignItems: 'center',
+    borderRadius: 8,
+    height: 16,
+    justifyContent: 'center',
     minWidth: 16,
-    top: 2,
+    paddingHorizontal: 4,
+    position: 'absolute',
+    right: -9,
+    top: -7,
   },
-  glassBackground: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 31,
-    overflow: 'hidden',
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '700',
   },
-  glassBorder: {
+  glassBar: {
+    alignItems: 'center',
+    borderColor: 'transparent',
     borderRadius: 31,
     borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    height: 62,
+    overflow: 'hidden',
+    padding: 5,
+    width: '100%',
   },
-  tabBar: {
-    backgroundColor: 'transparent',
-    borderTopWidth: 0,
-    borderRadius: 31,
-    elevation: 0,
+  iconWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  tabBarWrap: {
     height: 62,
     left: 54,
-    paddingBottom: 0,
     position: 'absolute',
     right: 54,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.2,
     shadowRadius: 24,
+    zIndex: 100,
   },
-  tabItem: {
+  tabButton: {
+    alignItems: 'center',
     borderRadius: 28,
-    paddingVertical: 5,
+    flex: 1,
+    gap: 2,
+    height: 52,
+    justifyContent: 'center',
   },
   tabLabel: {
     fontSize: 10,
     fontWeight: '600',
+  },
+  tabButtonPressed: {
+    transform: [{ scale: 0.96 }],
   },
 });

@@ -56,10 +56,8 @@ def create_app(
     hledger_executable: str = "hledger",
 ) -> FastAPI:
     root = data_dir or Path(os.environ.get("DABLOONS_DATA_DIR", "data"))
-    sources = root / "sources"
-    sources.mkdir(parents=True, exist_ok=True)
-    store = Store(root / "dabloons.sqlite3")
     ledger = Hledger(root / "ledger", hledger_executable)
+    store = Store(root, ledger)
     promotion_lock = threading.Lock()
 
     def transaction_group_id(requested: str | None = None) -> str:
@@ -98,8 +96,7 @@ def create_app(
             status=StatementStatus.UPLOADED,
             created_at=_now(),
         )
-        (sources / statement.id).write_bytes(content)
-        store.put_statement(statement)
+        store.create_statement(statement, content)
         return statement
 
     @app.get("/v1/statements", response_model=list[Statement])
@@ -118,8 +115,11 @@ def create_app(
         statement = store.get_statement(statement_id)
         if not statement:
             raise HTTPException(404, "Statement not found")
+        source = store.statement_source(statement_id)
+        if source is None:
+            raise HTTPException(404, "Statement source not found")
         return FileResponse(
-            sources / statement.id,
+            source,
             media_type=statement.media_type,
             filename=statement.filename,
         )
@@ -134,6 +134,9 @@ def create_app(
         statement = store.get_statement(statement_id)
         if not statement:
             raise HTTPException(404, "Statement not found")
+        source = store.statement_source(statement_id)
+        if source is None:
+            raise HTTPException(404, "Statement source not found")
         selected_compiler = compiler
         if selected_compiler is None:
             try:
@@ -144,7 +147,7 @@ def create_app(
                 raise HTTPException(503, f"GPT compiler unavailable: {error}") from error
         try:
             compilation = selected_compiler.compile(
-                sources / statement.id,
+                source,
                 filename=statement.filename,
                 media_type=statement.media_type,
                 target_account=request.target_account,
@@ -162,20 +165,12 @@ def create_app(
                 )
                 store.create_transaction(transaction)
                 transactions.append(transaction)
-            store.put_statement(
-                statement.model_copy(update={"status": StatementStatus.COMPILED, "error": None})
-            )
             return CompilationResult(
                 transactions=transactions, warnings=compilation.warnings
             )
         except HTTPException:
             raise
         except Exception as error:
-            store.put_statement(
-                statement.model_copy(
-                    update={"status": StatementStatus.FAILED, "error": str(error)}
-                )
-            )
             raise HTTPException(502, f"Statement compilation failed: {error}") from error
 
     @app.post("/v1/staged-transactions", response_model=Transaction, status_code=201)

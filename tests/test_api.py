@@ -59,6 +59,13 @@ def test_upload_compile_edit_and_individually_approve(tmp_path: Path) -> None:
         files={"source": ("statement.csv", b"2026-08-01,Coffee,-4.50", "text/csv")},
     )
     assert uploaded.status_code == 201
+    statement_directory = (
+        tmp_path / "data" / "sources" / uploaded.json()["id"]
+    )
+    source_files = list(statement_directory.iterdir())
+    assert len(source_files) == 1
+    assert source_files[0].name == "statement.csv"
+    assert not (tmp_path / "data" / "dabloons.sqlite3").exists()
 
     compiled = api.post(
         f"/v1/statements/{uploaded.json()['id']}/compile",
@@ -68,11 +75,16 @@ def test_upload_compile_edit_and_individually_approve(tmp_path: Path) -> None:
         },
     )
     assert compiled.status_code == 200
+    assert api.get(f"/v1/statements/{uploaded.json()['id']}").json()["status"] == "compiled"
     staged = compiled.json()["transactions"][0]
     assert staged["state"] == "staged"
     assert staged["statement_description"] == "Coffee"
     assert staged["note"] == "Coffee purchase"
     assert "source_reference" not in staged
+    staged_journal = (
+        tmp_path / "data" / "ledger" / "staged" / f"{staged['id']}.journal"
+    )
+    assert f"{staged['date']} ! Coffee" in staged_journal.read_text()
 
     edited = {
         "date": staged["date"],
@@ -96,6 +108,7 @@ def test_upload_compile_edit_and_individually_approve(tmp_path: Path) -> None:
     assert "Neighborhood Coffee" in batch.read_text()
     assert f"; transaction-group: {staged['transaction_group_id']}" in batch.read_text()
     assert "source-ref:" not in batch.read_text()
+    assert not staged_journal.exists()
 
     immutable = api.patch(
         f"/v1/staged-transactions/{staged['id']}",

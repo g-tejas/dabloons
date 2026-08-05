@@ -1,12 +1,13 @@
 import json
 import sqlite3
 
+from dabloons.ledger import Hledger
 from dabloons.store import Store
 
 
 def test_store_migrates_existing_transactions(tmp_path) -> None:
-    path = tmp_path / "dabloons.sqlite3"
-    with sqlite3.connect(path) as connection:
+    database = tmp_path / "dabloons.sqlite3"
+    with sqlite3.connect(database) as connection:
         connection.execute(
             """
             CREATE TABLE transactions (
@@ -50,19 +51,18 @@ def test_store_migrates_existing_transactions(tmp_path) -> None:
             ),
         )
 
-    store = Store(path)
+    store = Store(tmp_path, Hledger(tmp_path / "ledger"))
     transaction = store.get_transaction("txn_existing")
     first_group = transaction.transaction_group_id
 
     assert first_group.startswith("txg_")
     assert transaction.statement_description == "Existing purchase"
-    assert Store(path).get_transaction("txn_existing").transaction_group_id == first_group
-    with sqlite3.connect(path) as connection:
-        document = json.loads(
-            connection.execute(
-                "SELECT document FROM transactions WHERE id = ?",
-                ("txn_existing",),
-            ).fetchone()[0]
-        )
-    assert "payee" not in document
-    assert "source_reference" not in document
+    assert transaction.state == "reconciled"
+    journal = tmp_path / "ledger" / "reconciled" / "txn_existing.journal"
+    assert journal.exists()
+    assert "2026-08-01 * Existing purchase" in journal.read_text()
+    assert "payee" not in journal.read_text()
+    assert "source-ref" not in journal.read_text()
+    assert not database.exists()
+    reloaded = Store(tmp_path, Hledger(tmp_path / "ledger"))
+    assert reloaded.get_transaction("txn_existing").transaction_group_id == first_group

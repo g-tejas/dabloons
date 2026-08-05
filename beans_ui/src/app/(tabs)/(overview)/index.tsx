@@ -1,5 +1,5 @@
 import * as Haptics from 'expo-haptics';
-import { Link, Stack, useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, useColorScheme, View } from 'react-native';
 
@@ -174,53 +174,54 @@ export default function OverviewScreen() {
           />
           <InsetGroup>
             {accounts.map((account, index) => (
-              <Link
-                asChild
-                href={{
-                  pathname: '/account/[id]',
-                  params: { id: account.id },
-                }}
-                key={account.id}>
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.accountRow,
-                    pressed && { backgroundColor: theme.backgroundElement },
+              <Pressable
+                accessibilityHint="Opens account details"
+                accessibilityRole="button"
+                key={account.id}
+                onPress={() =>
+                  router.push({
+                    pathname: '/account/[id]',
+                    params: { id: account.id.replaceAll(':', '-') },
+                  })
+                }
+                style={({ pressed }) => [
+                  styles.accountRow,
+                  pressed && { backgroundColor: theme.backgroundElement },
+                ]}>
+                <View style={[styles.accountIcon, { backgroundColor: `${account.color}18` }]}>
+                  <SystemIcon
+                    color={account.color}
+                    fallback={account.icon}
+                    name={account.symbol}
+                    size={20}
+                  />
+                </View>
+                <View
+                  style={[
+                    styles.accountContent,
+                    index < accounts.length - 1 && {
+                      borderBottomColor: theme.border,
+                      borderBottomWidth: StyleSheet.hairlineWidth,
+                    },
                   ]}>
-                  <View style={[styles.accountIcon, { backgroundColor: `${account.color}18` }]}>
-                    <SystemIcon
-                      color={account.color}
-                      fallback={account.icon}
-                      name={account.symbol}
-                      size={20}
-                    />
-                  </View>
-                  <View
-                    style={[
-                      styles.accountContent,
-                      index < accounts.length - 1 && {
-                        borderBottomColor: theme.border,
-                        borderBottomWidth: StyleSheet.hairlineWidth,
-                      },
-                    ]}>
-                    <View style={styles.accountCopy}>
-                      <Text style={[styles.rowTitle, { color: theme.text }]}>{account.name}</Text>
-                      <Text style={[styles.rowDetail, { color: theme.textSecondary }]}>
-                        {account.detail}
-                      </Text>
-                    </View>
-                    <Text style={[styles.accountValue, { color: theme.text }]}>
-                      {formatMoney(account.balance)}
+                  <View style={styles.accountCopy}>
+                    <Text style={[styles.rowTitle, { color: theme.text }]}>{account.name}</Text>
+                    <Text style={[styles.rowDetail, { color: theme.textSecondary }]}>
+                      {account.detail}
                     </Text>
-                    <SystemIcon
-                      color={theme.textTertiary}
-                      fallback="chevron-right"
-                      name="chevron.right"
-                      size={12}
-                      weight="semibold"
-                    />
                   </View>
-                </Pressable>
-              </Link>
+                  <Text style={[styles.accountValue, { color: theme.text }]}>
+                    {formatMoney(account.balance)}
+                  </Text>
+                  <SystemIcon
+                    color={theme.textTertiary}
+                    fallback="chevron-right"
+                    name="chevron.right"
+                    size={12}
+                    weight="semibold"
+                  />
+                </View>
+              </Pressable>
             ))}
           </InsetGroup>
         </View>

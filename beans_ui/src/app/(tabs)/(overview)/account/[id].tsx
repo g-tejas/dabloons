@@ -29,7 +29,9 @@ export default function AccountDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { transactions } = useLedger();
   const [period, setPeriod] = useState<Period>('1M');
-  const account = ledgerAccounts.find((item) => item.id === id);
+  const account = ledgerAccounts.find(
+    (item) => item.id === id || item.id.replaceAll(':', '-') === id,
+  );
 
   const history = useMemo(() => {
     const base = accountHistory[id] ?? [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, account?.balance ?? 0];

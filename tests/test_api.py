@@ -17,6 +17,7 @@ class FakeCompiler:
                 AITransaction(
                     date="2026-08-01",
                     payee="Coffee",
+                    note="Coffee purchase",
                     postings=[
                         PostingInput(
                             account="expenses:food",
@@ -29,7 +30,6 @@ class FakeCompiler:
                             quantity="-4.50",
                         ),
                     ],
-                    source_reference="row 1",
                 )
             ]
         )
@@ -70,6 +70,9 @@ def test_upload_compile_edit_and_individually_approve(tmp_path: Path) -> None:
     assert compiled.status_code == 200
     staged = compiled.json()["transactions"][0]
     assert staged["state"] == "staged"
+    assert staged["payee"] == "Coffee"
+    assert staged["note"] == "Coffee purchase"
+    assert "source_reference" not in staged
 
     edited = {
         "date": staged["date"],
@@ -77,7 +80,6 @@ def test_upload_compile_edit_and_individually_approve(tmp_path: Path) -> None:
         "note": "Reviewed manually",
         "postings": staged["postings"],
         "statement_id": staged["statement_id"],
-        "source_reference": staged["source_reference"],
     }
     updated = api.patch(
         f"/v1/staged-transactions/{staged['id']}",
@@ -93,6 +95,7 @@ def test_upload_compile_edit_and_individually_approve(tmp_path: Path) -> None:
     batch = tmp_path / "data" / "ledger" / "reconciled" / f"{staged['id']}.journal"
     assert "Neighborhood Coffee" in batch.read_text()
     assert f"; transaction-group: {staged['transaction_group_id']}" in batch.read_text()
+    assert "source-ref:" not in batch.read_text()
 
     immutable = api.patch(
         f"/v1/staged-transactions/{staged['id']}",
@@ -193,7 +196,6 @@ def test_transactions_receive_groups_and_can_reuse_an_existing_group(
                 "note": unrelated_body["note"],
                 "postings": unrelated_body["postings"],
                 "statement_id": unrelated_body["statement_id"],
-                "source_reference": unrelated_body["source_reference"],
                 "transaction_group_id": purchase_group,
             },
         },

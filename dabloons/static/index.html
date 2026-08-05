@@ -52,7 +52,8 @@
       <h2>2. Add a manual staged transaction</h2>
       <form id="manual-form">
         <label>Date<input id="manual-date" type="date" required></label>
-        <label>Payee<input id="manual-payee" placeholder="Coffee shop" required></label>
+        <label>Bank statement text<input id="manual-payee" placeholder="APPLE.COM/BILL" required></label>
+        <label>Meaning / note<input id="manual-note" placeholder="iPad purchase"></label>
         <label>Amount<input id="manual-amount" type="number" step="0.01" required></label>
         <label>From account<input id="manual-from" value="assets:bank:checking" required></label>
         <label>To account<input id="manual-to" value="expenses:unknown" required></label>
@@ -114,7 +115,6 @@
       const value = {
         date: transaction.date, payee: transaction.payee, note: transaction.note,
         postings: transaction.postings, statement_id: transaction.statement_id,
-        source_reference: transaction.source_reference,
         transaction_group_id: transaction.transaction_group_id
       };
       return `<article class="transaction">
@@ -207,7 +207,8 @@
         await api("/v1/staged-transactions", {
           method:"POST", headers:{"Content-Type":"application/json"},
           body:JSON.stringify({
-            date:$("manual-date").value, payee:$("manual-payee").value, note:"",
+            date:$("manual-date").value, payee:$("manual-payee").value,
+            note:$("manual-note").value,
             postings:[
               {account:$("manual-from").value, commodity:$("manual-commodity").value, quantity:`-${amount}`},
               {account:$("manual-to").value, commodity:$("manual-commodity").value, quantity:amount}

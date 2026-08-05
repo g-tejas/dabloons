@@ -39,8 +39,6 @@ def render_transaction(transaction: Transaction) -> str:
         lines.append(f"    ; note: {_single_line(transaction.note)}")
     if transaction.statement_id:
         lines.append(f"    ; statement: {transaction.statement_id}")
-    if transaction.source_reference:
-        lines.append(f"    ; source-ref: {_single_line(transaction.source_reference)}")
     for posting in transaction.postings:
         lines.append(
             f"    {_single_line(posting.account)}    "

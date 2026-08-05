@@ -36,11 +36,16 @@ class PostingInput(BaseModel):
 
 class TransactionInput(BaseModel):
     date: date
-    payee: str = Field(min_length=1)
-    note: str = ""
+    payee: str = Field(
+        min_length=1,
+        description="Exact transaction description shown on the bank statement",
+    )
+    note: str = Field(
+        default="",
+        description="Semantic meaning of the transaction, such as 'iPad purchase'",
+    )
     postings: list[PostingInput] = Field(min_length=2)
     statement_id: str | None = None
-    source_reference: str | None = None
     transaction_group_id: str | None = Field(
         default=None, pattern=r"^txg_[0-9a-f]{32}$"
     )
@@ -109,10 +114,14 @@ class Watermark(WatermarkInput):
 
 class AITransaction(BaseModel):
     date: date
-    payee: str
-    note: str = ""
+    payee: str = Field(
+        description="Exact transaction description shown on the bank statement"
+    )
+    note: str = Field(
+        default="",
+        description="Semantic meaning of the transaction, such as 'iPad purchase'",
+    )
     postings: list[PostingInput]
-    source_reference: str | None = None
 
 
 class AICompilation(BaseModel):

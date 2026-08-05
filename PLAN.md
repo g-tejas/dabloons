@@ -310,7 +310,7 @@ Input context should include only relevant information:
 
 The AI decides:
 
-- payee and note normalization
+- exact bank-statement text for `payee` and a concise semantic meaning for `note`
 - counteraccount selection
 - transfer recognition
 - refund and reversal treatment
@@ -394,8 +394,8 @@ A representative compiled item:
     "id": "txn_01J...",
     "date": "2026-07-02",
     "status": "staged",
-    "payee": "Some Merchant",
-    "note": "",
+    "payee": "VISA PURCHASE APPLE STORE 0702",
+    "note": "iPad purchase",
     "postings": [
       {
         "account": "expenses:food",
@@ -414,7 +414,7 @@ A representative compiled item:
 }
 ```
 
-All quantities are decimal strings. IDs, source references, model details, and review decisions are preserved independently of journal formatting.
+All quantities are decimal strings. IDs, model details, and review decisions are preserved independently of journal formatting.
 
 ## 9. Deterministic journal renderer
 
@@ -423,11 +423,12 @@ The renderer converts approved typed IR into consistent hledger syntax. AI does 
 Example reconciled transaction:
 
 ```journal
-2026-07-02 * Some Merchant
+2026-07-02 * VISA PURCHASE APPLE STORE 0702
     ; id: txn_01J...
+    ; transaction-group: txg_01J...
+    ; note: iPad purchase
     ; reconciliation: rec_01J...
     ; statement: stmt_01J...
-    ; source-ref: page-2-row-14
     ; ai-run: run_01J...
     expenses:food                 S$12.30
     assets:bank:checking

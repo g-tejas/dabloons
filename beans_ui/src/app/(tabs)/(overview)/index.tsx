@@ -3,10 +3,12 @@ import { Stack } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 
+import { AnimatedNumber } from '@/components/finance/animated-number';
 import { CategoryPill } from '@/components/finance/category-pill';
 import { InsetGroup } from '@/components/finance/inset-group';
 import { SectionHeader } from '@/components/finance/section-header';
 import { SystemIcon } from '@/components/finance/system-icon';
+import { TrendChart } from '@/components/finance/trend-chart';
 import { TransactionRow } from '@/components/finance/transaction-row';
 import {
   budgets,
@@ -52,11 +54,15 @@ const accounts: {
   },
 ];
 
+const cashFlowTrend = [3054, 2180, 3470, 2560, 3820, 2910, 3260, 2260, 3610, 2820, 4010, 2980];
+const chartLabels = ['Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'];
+
 export default function OverviewScreen() {
   const scheme = useColorScheme() ?? 'light';
   const theme = Colors[scheme];
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [chartMode, setChartMode] = useState<'Net Worth' | 'Cash Flow'>('Net Worth');
+  const [visibilityAnimation, setVisibilityAnimation] = useState(0);
 
   function selectChartMode(mode: 'Net Worth' | 'Cash Flow') {
     void Haptics.selectionAsync();
@@ -71,7 +77,7 @@ export default function OverviewScreen() {
             <Pressable
               accessibilityLabel="Profile and settings"
               hitSlop={10}
-              onPress={() => Alert.alert('Beans', 'Profile and settings will live here.')}
+              onPress={() => Alert.alert('Dabloons', 'Profile and settings will live here.')}
               style={({ pressed }) => pressed && styles.controlPressed}>
               <SystemIcon
                 color={theme.accent}
@@ -97,10 +103,13 @@ export default function OverviewScreen() {
               hitSlop={10}
               onPress={() => {
                 void Haptics.selectionAsync();
+                setVisibilityAnimation((value) => value + 1);
                 setBalanceVisible((visible) => !visible);
               }}
               style={({ pressed }) => pressed && styles.controlPressed}>
               <SystemIcon
+                key={visibilityAnimation}
+                animationSpec={{ effect: { type: 'bounce' } }}
                 color={theme.textSecondary}
                 fallback={balanceVisible ? 'visibility' : 'visibility-off'}
                 name={balanceVisible ? 'eye' : 'eye.slash'}
@@ -108,9 +117,15 @@ export default function OverviewScreen() {
               />
             </Pressable>
           </View>
-          <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.balance, { color: theme.text }]}>
-            {balanceVisible ? formatMoney(overview.netWorth) : '$••,•••.••'}
-          </Text>
+          {balanceVisible ? (
+            <AnimatedNumber
+              formatter={formatMoney}
+              style={[styles.balance, { color: theme.text }]}
+              value={overview.netWorth}
+            />
+          ) : (
+            <Text style={[styles.balance, { color: theme.text }]}>$••,•••.••</Text>
+          )}
           <View style={styles.changeRow}>
             <SystemIcon color={theme.positive} fallback="north-east" name="arrow.up.right" size={13} weight="semibold" />
             <Text style={[styles.changeText, { color: theme.positive }]}>$1,284.32 (3.8%)</Text>
@@ -142,25 +157,14 @@ export default function OverviewScreen() {
         </View>
 
         <View style={styles.chartBlock}>
-          <View style={styles.chartBars}>
-            {netWorthTrend.map((height, index) => {
-              const cashFlowHeight = [58, 34, 68, 44, 74, 51, 62, 38, 70, 49, 77, 56][index];
-              return (
-                <View key={`${height}-${index}`} style={styles.chartSlot}>
-                  <View
-                    style={[
-                      styles.chartBar,
-                      {
-                        backgroundColor:
-                          index === netWorthTrend.length - 1 ? theme.accent : `${theme.accent}45`,
-                        height: `${chartMode === 'Net Worth' ? height : cashFlowHeight}%`,
-                      },
-                    ]}
-                  />
-                </View>
-              );
-            })}
-          </View>
+          <TrendChart
+            key={chartMode}
+            accessibilityLabel={`${chartMode} trend from September through August`}
+            color={chartMode === 'Net Worth' ? theme.accent : theme.positive}
+            formatValue={formatMoney}
+            labels={chartLabels}
+            values={chartMode === 'Net Worth' ? netWorthTrend : cashFlowTrend}
+          />
           <View style={styles.axis}>
             <Text style={[styles.axisLabel, { color: theme.textTertiary }]}>SEP</Text>
             <Text style={[styles.axisLabel, { color: theme.textTertiary }]}>MAR</Text>

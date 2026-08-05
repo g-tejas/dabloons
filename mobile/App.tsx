@@ -1,6 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import React, { useRef, useState } from 'react';
 import {
@@ -85,18 +84,7 @@ function FinanceApp() {
 
   return (
     <SafeAreaView edges={['top']} style={styles.safeArea}>
-      <StatusBar style="light" />
-      <View pointerEvents="none" style={styles.ambient}>
-        <LinearGradient
-          colors={['#080A12', '#0D1120', '#08090F']}
-          end={{ x: 1, y: 1 }}
-          start={{ x: 0, y: 0 }}
-          style={StyleSheet.absoluteFill}
-        />
-        <View style={styles.orbLime} />
-        <View style={styles.orbBlue} />
-        <View style={styles.orbPurple} />
-      </View>
+      <StatusBar style="dark" />
       <Animated.View style={[styles.content, { opacity: fade }]}>
         {activeTab === 'Home' && <HomeScreen {...screenProps} />}
         {activeTab === 'Activity' && <ActivityScreen {...screenProps} />}
@@ -105,7 +93,7 @@ function FinanceApp() {
       </Animated.View>
 
       <View style={[styles.navWrap, { bottom: Math.max(insets.bottom, 12) }]}>
-        <GlassSurface style={styles.nav} tintColor="rgba(20,24,35,0.42)">
+        <GlassSurface style={styles.nav} tintColor="rgba(255,255,255,0.58)">
           {tabs.map((tab) => {
             const active = tab.label === activeTab;
             return (
@@ -119,7 +107,7 @@ function FinanceApp() {
               >
                 <View style={[styles.navIcon, active && styles.navIconActive]}>
                   <Ionicons
-                    color={active ? colors.background : colors.muted}
+                    color={active ? colors.white : colors.muted}
                     name={active ? tab.activeIcon : tab.icon}
                     size={19}
                   />
@@ -141,9 +129,9 @@ function FinanceApp() {
           },
         ]}
       >
-        <GlassSurface style={styles.toast} tintColor="rgba(20,24,35,0.76)">
+        <GlassSurface style={styles.toast} tintColor="rgba(255,255,255,0.82)">
           <View style={styles.toastIcon}>
-            <Ionicons color={colors.background} name="checkmark" size={13} />
+            <Ionicons color={colors.white} name="checkmark" size={13} />
           </View>
           <Text numberOfLines={1} style={styles.toastText}>{toast}</Text>
         </GlassSurface>
@@ -152,7 +140,7 @@ function FinanceApp() {
       <Modal animationType="slide" onRequestClose={() => setAddOpen(false)} transparent visible={addOpen}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalBackdrop}>
           <Pressable onPress={() => setAddOpen(false)} style={StyleSheet.absoluteFill} />
-          <GlassSurface style={styles.sheet} tintColor="rgba(14,17,26,0.94)">
+          <GlassSurface style={styles.sheet} tintColor="rgba(255,255,255,0.92)">
             <View style={styles.handle} />
             <View style={styles.sheetHeader}>
               <Pressable hitSlop={12} onPress={() => setAddOpen(false)}>
@@ -213,7 +201,7 @@ function FinanceApp() {
         <View style={styles.modalBackdrop}>
           <Pressable onPress={() => setSelectedTransaction(null)} style={StyleSheet.absoluteFill} />
           {selected && (
-            <GlassSurface style={[styles.sheet, styles.detailSheet]} tintColor="rgba(14,17,26,0.94)">
+            <GlassSurface style={[styles.sheet, styles.detailSheet]} tintColor="rgba(255,255,255,0.92)">
               <View style={styles.handle} />
               <View style={[styles.detailIcon, { backgroundColor: `${selected.color}20` }]}>
                 <Ionicons color={selected.color} name={selected.icon as keyof typeof Ionicons.glyphMap} size={28} />
@@ -257,42 +245,18 @@ export default function App() {
 
 const styles = StyleSheet.create({
   safeArea: { backgroundColor: colors.background, flex: 1 },
-  ambient: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
-  orbLime: {
-    backgroundColor: 'rgba(174,255,74,0.16)',
-    borderRadius: 190,
-    height: 380,
-    position: 'absolute',
-    right: -220,
-    top: 60,
-    width: 380,
-  },
-  orbBlue: {
-    backgroundColor: 'rgba(67,142,255,0.13)',
-    borderRadius: 170,
-    height: 340,
-    left: -220,
-    position: 'absolute',
-    top: 360,
-    width: 340,
-  },
-  orbPurple: {
-    backgroundColor: 'rgba(155,113,255,0.11)',
-    borderRadius: 180,
-    bottom: -130,
-    height: 360,
-    position: 'absolute',
-    right: -160,
-    width: 360,
-  },
   content: { flex: 1 },
   navWrap: { left: 16, position: 'absolute', right: 16 },
   nav: {
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(255,255,255,0.9)',
     borderRadius: 31,
     flexDirection: 'row',
     height: 64,
     paddingHorizontal: 8,
+    shadowColor: '#000000',
+    shadowOffset: { height: 8, width: 0 },
+    shadowOpacity: 0.12,
+    shadowRadius: 22,
   },
   navItem: { alignItems: 'center', flex: 1, justifyContent: 'center', paddingTop: 3 },
   navIcon: { alignItems: 'center', borderRadius: 18, height: 29, justifyContent: 'center', width: 42 },
@@ -300,8 +264,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
     shadowColor: colors.accent,
     shadowOffset: { height: 0, width: 0 },
-    shadowOpacity: 0.32,
-    shadowRadius: 12,
+    shadowOpacity: 0.16,
+    shadowRadius: 8,
   },
   navLabel: { color: colors.muted, fontFamily: fonts.medium, fontSize: 9, marginTop: 1 },
   navLabelActive: { color: colors.text },
@@ -327,7 +291,7 @@ const styles = StyleSheet.create({
     width: 20,
   },
   toastText: { color: colors.text, fontFamily: fonts.demi, fontSize: 12 },
-  modalBackdrop: { backgroundColor: 'rgba(0,0,0,0.62)', flex: 1, justifyContent: 'flex-end' },
+  modalBackdrop: { backgroundColor: 'rgba(0,0,0,0.28)', flex: 1, justifyContent: 'flex-end' },
   sheet: {
     borderColor: 'rgba(255,255,255,0.18)',
     borderTopLeftRadius: 30,
@@ -363,7 +327,7 @@ const styles = StyleSheet.create({
   },
   categoryChipActive: { backgroundColor: colors.accent, borderColor: colors.accent },
   categoryText: { color: colors.muted, fontFamily: fonts.demi, fontSize: 11 },
-  categoryTextActive: { color: colors.background },
+  categoryTextActive: { color: colors.white },
   noteInput: {
     backgroundColor: colors.surfaceRaised,
     borderColor: colors.border,
@@ -378,7 +342,7 @@ const styles = StyleSheet.create({
   },
   saveButton: { alignItems: 'center', backgroundColor: colors.accent, borderRadius: radii.pill, paddingVertical: 16 },
   buttonPressed: { opacity: 0.75, transform: [{ scale: 0.99 }] },
-  saveButtonText: { color: colors.background, fontFamily: fonts.demi, fontSize: 14 },
+  saveButtonText: { color: colors.white, fontFamily: fonts.demi, fontSize: 14 },
   detailSheet: { alignItems: 'center', paddingBottom: 36 },
   detailIcon: { alignItems: 'center', borderRadius: 30, height: 60, justifyContent: 'center', marginTop: 10, width: 60 },
   detailMerchant: { color: colors.text, fontFamily: fonts.demi, fontSize: 17, marginTop: 13 },
@@ -397,5 +361,5 @@ const styles = StyleSheet.create({
   detailLabel: { color: colors.muted, fontFamily: fonts.medium, fontSize: 12 },
   detailValue: { color: colors.text, fontFamily: fonts.demi, fontSize: 12 },
   detailDone: { alignItems: 'center', backgroundColor: colors.text, borderRadius: radii.pill, marginTop: 20, paddingVertical: 14, width: '100%' },
-  detailDoneText: { color: colors.background, fontFamily: fonts.demi, fontSize: 13 },
+  detailDoneText: { color: colors.white, fontFamily: fonts.demi, fontSize: 13 },
 });

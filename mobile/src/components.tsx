@@ -33,7 +33,7 @@ type GlassSurfaceProps = PropsWithChildren<{
 export function GlassSurface({
   children,
   style,
-  tintColor = 'rgba(255,255,255,0.06)',
+  tintColor = 'rgba(255,255,255,0.62)',
   interactive = false,
 }: GlassSurfaceProps) {
   const nativeGlass =
@@ -45,20 +45,20 @@ export function GlassSurface({
     <View style={[styles.glassSurface, style]}>
       {nativeGlass ? (
         <GlassView
-          glassEffectStyle="regular"
+          glassEffectStyle="clear"
           isInteractive={interactive}
           style={StyleSheet.absoluteFill}
           tintColor={tintColor}
         />
       ) : (
         <BlurView
-          intensity={44}
+          intensity={72}
           style={StyleSheet.absoluteFill}
-          tint="systemUltraThinMaterialDark"
+          tint="systemUltraThinMaterialLight"
         />
       )}
       <ExpoLinearGradient
-        colors={['rgba(255,255,255,0.12)', 'rgba(255,255,255,0.015)']}
+        colors={['rgba(255,255,255,0.58)', 'rgba(255,255,255,0.12)']}
         end={{ x: 0.8, y: 1 }}
         pointerEvents="none"
         start={{ x: 0.1, y: 0 }}
@@ -112,8 +112,8 @@ export function ActionButton({
       onPressOut={() => Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start()}
     >
       <Animated.View style={[styles.action, { transform: [{ scale }] }]}>
-        <GlassSurface interactive style={styles.actionIcon} tintColor="rgba(199,255,89,0.16)">
-          <Ionicons color={colors.text} name={icon} size={20} />
+        <GlassSurface interactive style={styles.actionIcon} tintColor="rgba(255,255,255,0.56)">
+          <Ionicons color={colors.accent} name={icon} size={20} />
         </GlassSurface>
         <Text style={styles.actionLabel}>{label}</Text>
       </Animated.View>
@@ -285,9 +285,9 @@ export function formatCurrency(value: number, digits = 2) {
 
 const styles = StyleSheet.create({
   pressed: { opacity: 0.65 },
-  rowPressed: { backgroundColor: 'rgba(255,255,255,0.055)', transform: [{ scale: 0.99 }] },
+  rowPressed: { backgroundColor: 'rgba(0,0,0,0.035)', transform: [{ scale: 0.99 }] },
   glassSurface: {
-    borderColor: 'rgba(255,255,255,0.16)',
+    borderColor: 'rgba(255,255,255,0.74)',
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
   },
@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 50,
   },
-  actionLabel: { color: colors.text, fontFamily: fonts.medium, fontSize: 12 },
+  actionLabel: { color: colors.muted, fontFamily: fonts.medium, fontSize: 12 },
   transaction: {
     alignItems: 'center',
     borderRadius: radii.md,

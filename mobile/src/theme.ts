@@ -1,29 +1,29 @@
 import { Platform } from 'react-native';
 
 export const colors = {
-  background: '#07090F',
-  surface: 'rgba(20,24,35,0.62)',
-  surfaceRaised: 'rgba(255,255,255,0.08)',
-  surfaceSoft: 'rgba(255,255,255,0.06)',
-  border: 'rgba(255,255,255,0.12)',
-  text: '#F7F8FC',
-  muted: '#9DA6B8',
-  subtle: '#626B7D',
-  accent: '#D7FF73',
-  accentDark: 'rgba(174,255,74,0.14)',
-  green: '#7DF29C',
-  red: '#FF7C88',
-  orange: '#FFBD72',
-  purple: '#B6A5FF',
-  blue: '#72C7FF',
+  background: '#F2F2F7',
+  surface: '#FFFFFF',
+  surfaceRaised: '#F2F2F7',
+  surfaceSoft: '#E9E9EF',
+  border: 'rgba(60,60,67,0.14)',
+  text: '#111114',
+  muted: '#6E6E73',
+  subtle: '#AEAEB2',
+  accent: '#007AFF',
+  accentDark: 'rgba(0,122,255,0.11)',
+  green: '#34C759',
+  red: '#FF3B30',
+  orange: '#FF9500',
+  purple: '#AF52DE',
+  blue: '#007AFF',
   white: '#FFFFFF',
 };
 
 export const fonts = {
-  regular: Platform.select({ ios: 'Avenir Next', default: 'sans-serif' }),
-  medium: Platform.select({ ios: 'Avenir Next Medium', default: 'sans-serif-medium' }),
-  demi: Platform.select({ ios: 'Avenir Next Demi Bold', default: 'sans-serif-medium' }),
-  mono: Platform.select({ ios: 'Menlo', default: 'monospace' }),
+  regular: Platform.select({ ios: 'System', default: 'sans-serif' }),
+  medium: Platform.select({ ios: 'System', default: 'sans-serif-medium' }),
+  demi: Platform.select({ ios: 'System', default: 'sans-serif-medium' }),
+  mono: Platform.select({ ios: 'SF Mono', default: 'monospace' }),
 };
 
 export const radii = {

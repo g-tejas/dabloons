@@ -32,7 +32,7 @@ export const accounts: Account[] = [
     kind: 'Checking',
     balance: 6842.19,
     number: '•• 1842',
-    color: '#C7FF59',
+    color: '#007AFF',
     change: '+$1,240 this month',
   },
   {
@@ -41,7 +41,7 @@ export const accounts: Account[] = [
     kind: 'Savings',
     balance: 12440.0,
     number: '•• 0921',
-    color: '#A998FF',
+    color: '#34C759',
     change: '68% of goal',
   },
   {
@@ -50,7 +50,7 @@ export const accounts: Account[] = [
     kind: 'Investing',
     balance: 4560.28,
     number: '•• 6610',
-    color: '#66B7FF',
+    color: '#AF52DE',
     change: '+8.4% all time',
   },
 ];

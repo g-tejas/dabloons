@@ -5,8 +5,8 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
-    "backgroundColor": "#080B0A",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#F2F2F7",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "app.dabloons.mobile"

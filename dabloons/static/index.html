@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dabloons Review</title>
+  <style>
+    :root { color-scheme: light; font-family: ui-sans-serif, system-ui, sans-serif; background:#f5f3ee; color:#1c2822; }
+    body { margin:0; }
+    header { padding:2rem max(1rem, 6vw); background:#173f35; color:white; }
+    header h1 { margin:0; font-size:clamp(1.8rem, 4vw, 3rem); }
+    header p { margin:.4rem 0 0; color:#cde2d9; }
+    main { max-width:1100px; margin:0 auto; padding:2rem 1rem 5rem; display:grid; gap:1.25rem; }
+    section { background:white; border:1px solid #ddd8ce; border-radius:14px; padding:1.25rem; box-shadow:0 3px 14px #26352d0c; }
+    h2 { margin:.1rem 0 1rem; font-size:1.15rem; }
+    form, .row { display:flex; flex-wrap:wrap; gap:.7rem; align-items:end; }
+    label { display:grid; gap:.3rem; font-size:.78rem; font-weight:650; color:#4c5b54; flex:1; min-width:150px; }
+    input, textarea, button { font:inherit; }
+    input, textarea { border:1px solid #bbb8b0; border-radius:8px; padding:.65rem; background:#fff; }
+    textarea { width:100%; min-height:165px; box-sizing:border-box; font-family:ui-monospace, monospace; font-size:.82rem; }
+    button { border:0; border-radius:8px; padding:.7rem 1rem; background:#1f6b57; color:white; cursor:pointer; font-weight:700; }
+    button.secondary { background:#e9ece8; color:#273d34; }
+    button.danger { background:#9f3838; }
+    button:disabled { opacity:.5; cursor:wait; }
+    .transaction { border-top:1px solid #ebe7df; padding:1rem 0; }
+    .transaction:first-child { border-top:0; }
+    .transaction header { padding:0; background:none; color:inherit; display:flex; justify-content:space-between; gap:1rem; }
+    .transaction h3 { margin:0 0 .25rem; }
+    .meta { color:#6c746f; font-size:.8rem; }
+    .pill { display:inline-block; border-radius:999px; padding:.2rem .55rem; background:#efe9d8; color:#65561e; font-size:.72rem; }
+    #notice { position:fixed; right:1rem; bottom:1rem; max-width:420px; padding:.8rem 1rem; border-radius:9px; background:#152b24; color:white; display:none; white-space:pre-wrap; }
+    .empty { color:#747b77; font-style:italic; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Dabloons</h1>
+    <p>AI proposes. You review. hledger decides whether it balances.</p>
+  </header>
+  <main>
+    <section>
+      <h2>1. Upload and compile</h2>
+      <form id="upload-form">
+        <label>Statement file<input id="file" type="file" required></label>
+        <label>Tracked account<input id="account" value="assets:bank:checking" required></label>
+        <label>Commodity<input id="commodity" value="USD" required></label>
+        <button>Upload & ask GPT</button>
+      </form>
+    </section>
+
+    <section>
+      <h2>2. Add a manual staged transaction</h2>
+      <form id="manual-form">
+        <label>Date<input id="manual-date" type="date" required></label>
+        <label>Bank statement text<input id="manual-statement-description" placeholder="APPLE.COM/BILL" required></label>
+        <label>Meaning / note<input id="manual-note" placeholder="iPad purchase"></label>
+        <label>Amount<input id="manual-amount" type="number" step="0.01" required></label>
+        <label>From account<input id="manual-from" value="assets:bank:checking" required></label>
+        <label>To account<input id="manual-to" value="expenses:unknown" required></label>
+        <label>Commodity<input id="manual-commodity" value="USD" required></label>
+        <button>Stage transaction</button>
+      </form>
+    </section>
+
+    <section>
+      <div class="row" style="justify-content:space-between">
+        <h2>3. Review staged transactions</h2>
+        <button class="secondary" onclick="refresh()">Refresh</button>
+      </div>
+      <div id="staged"></div>
+    </section>
+
+    <section>
+      <h2>4. Assert a verified balance</h2>
+      <form id="watermark-form">
+        <label>Account<input id="wm-account" value="assets:bank:checking" required></label>
+        <label>Date<input id="wm-date" type="date" required></label>
+        <label>Balance<input id="wm-balance" type="number" step="0.01" required></label>
+        <label>Commodity<input id="wm-commodity" value="USD" required></label>
+        <button>Create watermark</button>
+      </form>
+    </section>
+
+    <section>
+      <h2>Reconciled history</h2>
+      <div id="reconciled"></div>
+    </section>
+  </main>
+  <div id="notice"></div>
+  <script>
+    const $ = id => document.getElementById(id);
+    const today = new Date().toISOString().slice(0, 10);
+    $("manual-date").value = today;
+    $("wm-date").value = today;
+
+    function notify(message, error=false) {
+      const box = $("notice");
+      box.textContent = message;
+      box.style.background = error ? "#842f2f" : "#152b24";
+      box.style.display = "block";
+      setTimeout(() => box.style.display = "none", 5000);
+    }
+
+    async function api(path, options={}) {
+      const response = await fetch(path, options);
+      if (!response.ok) {
+        let detail;
+        try { detail = (await response.json()).detail; } catch { detail = await response.text(); }
+        throw new Error(detail || `${response.status} ${response.statusText}`);
+      }
+      return response.status === 204 ? null : response.json();
+    }
+
+    function editable(transaction) {
+      const value = {
+        date: transaction.date, statement_description: transaction.statement_description,
+        note: transaction.note,
+        postings: transaction.postings, statement_id: transaction.statement_id,
+        transaction_group_id: transaction.transaction_group_id
+      };
+      return `<article class="transaction">
+        <header><div><h3>${escapeHtml(transaction.statement_description)}</h3>
+        <span class="meta">${transaction.date} · revision ${transaction.revision}</span></div>
+        <span class="pill">needs your approval</span></header>
+        <textarea id="edit-${transaction.id}">${escapeHtml(JSON.stringify(value, null, 2))}</textarea>
+        <div class="row">
+          <button onclick="save('${transaction.id}', ${transaction.revision})">Save edits</button>
+          <button onclick="approve('${transaction.id}')">Approve individually</button>
+          <button class="danger" onclick="removeTransaction('${transaction.id}')">Delete</button>
+        </div>
+      </article>`;
+    }
+
+    function readonly(transaction) {
+      const postings = transaction.postings.map(p =>
+        `${escapeHtml(p.account)}: ${escapeHtml(p.quantity)} ${escapeHtml(p.commodity)}`
+      ).join("<br>");
+      return `<article class="transaction"><header><div><h3>${escapeHtml(transaction.statement_description)}</h3>
+        <span class="meta">${transaction.date} · group ${escapeHtml(transaction.transaction_group_id)} · approved ${transaction.approved_at || ""}</span></div>
+        <span class="pill">immutable</span></header><p>${postings}</p></article>`;
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, c => ({
+        "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
+      })[c]);
+    }
+
+    async function refresh() {
+      try {
+        const [staged, reconciled] = await Promise.all([
+          api("/v1/transactions?state=staged"),
+          api("/v1/transactions?state=reconciled")
+        ]);
+        $("staged").innerHTML = staged.length ? staged.map(editable).join("") : '<p class="empty">Nothing staged.</p>';
+        $("reconciled").innerHTML = reconciled.length ? reconciled.map(readonly).join("") : '<p class="empty">Nothing reconciled yet.</p>';
+      } catch (error) { notify(error.message, true); }
+    }
+
+    async function save(id, revision) {
+      try {
+        const transaction = JSON.parse($(`edit-${id}`).value);
+        await api(`/v1/staged-transactions/${id}`, {
+          method:"PATCH", headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({expected_revision:revision, transaction})
+        });
+        notify("Saved a new staged revision.");
+        refresh();
+      } catch (error) { notify(error.message, true); }
+    }
+
+    async function approve(id) {
+      try {
+        await api(`/v1/staged-transactions/${id}/approve`, {method:"POST"});
+        notify("Transaction approved and committed to hledger.");
+        refresh();
+      } catch (error) { notify(error.message, true); }
+    }
+
+    async function removeTransaction(id) {
+      try {
+        await api(`/v1/staged-transactions/${id}`, {method:"DELETE"});
+        notify("Staged transaction deleted.");
+        refresh();
+      } catch (error) { notify(error.message, true); }
+    }
+
+    $("upload-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      const button = event.submitter; button.disabled = true;
+      try {
+        const data = new FormData(); data.append("source", $("file").files[0]);
+        const statement = await api("/v1/statements", {method:"POST", body:data});
+        const result = await api(`/v1/statements/${statement.id}/compile`, {
+          method:"POST", headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({target_account:$("account").value, default_commodity:$("commodity").value})
+        });
+        notify(`GPT staged ${result.transactions.length} transaction(s).\n${result.warnings.join("\n")}`);
+        refresh();
+      } catch (error) { notify(error.message, true); }
+      finally { button.disabled = false; }
+    });
+
+    $("manual-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      const amount = Math.abs(Number($("manual-amount").value)).toFixed(2);
+      try {
+        await api("/v1/staged-transactions", {
+          method:"POST", headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({
+            date:$("manual-date").value,
+            statement_description:$("manual-statement-description").value,
+            note:$("manual-note").value,
+            postings:[
+              {account:$("manual-from").value, commodity:$("manual-commodity").value, quantity:`-${amount}`},
+              {account:$("manual-to").value, commodity:$("manual-commodity").value, quantity:amount}
+            ]
+          })
+        });
+        notify("Manual transaction staged."); event.target.reset();
+        $("manual-date").value=today; $("manual-commodity").value="USD";
+        refresh();
+      } catch (error) { notify(error.message, true); }
+    });
+
+    $("watermark-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      try {
+        await api("/v1/watermarks", {
+          method:"POST", headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({
+            account:$("wm-account").value, date:$("wm-date").value,
+            balance:$("wm-balance").value, commodity:$("wm-commodity").value
+          })
+        });
+        notify("Balance assertion committed.");
+      } catch (error) { notify(error.message, true); }
+    });
+    refresh();
+  </script>
+</body>
+</html>

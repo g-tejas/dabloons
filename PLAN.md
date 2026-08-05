@@ -1,4 +1,4 @@
-# Beans Finance System Plan
+# Dabloons Finance System Plan
 
 ## 1. Product vision
 
@@ -33,9 +33,9 @@ This is a greenfield design. Migration, backwards compatibility, and reuse of an
 ## 2. Core decisions
 
 1. **Use hledger as the accounting engine.**
-2. **Do not use hledger's CSV import system.** The AI compiler handles statement interpretation and accounting decisions.
+2. **Route every uploaded format through the AI compiler.** Do not use hledger's CSV import system or write deterministic financial parsers for PDF, CSV, or images. An intake adapter may perform lossless format conversion needed by an AI provider, but semantic extraction remains an AI responsibility.
 3. **Expose a domain-specific REST/OpenAPI interface.** Do not expose hledger's internal JSON schema directly to clients.
-4. **Require human approval.** AI confidence can prioritize the review UI but can never bypass approval.
+4. **Require individual human approval.** Every AI-created or manually entered transaction begins staged and must be approved individually. AI confidence can prioritize the review UI but can never bypass approval.
 5. **Use a typed intermediate representation (IR).** AI makes semantic decisions; deterministic code renders journal syntax.
 6. **Keep staged data outside the canonical journal.** Only human-approved transactions become accounting truth.
 7. **Make reconciled transactions immutable.** Corrections and reversals are new transactions.
@@ -73,18 +73,18 @@ hledger supports ordinary and extended assertion forms (`=`, `==`, `=*`, and `==
 
 ### 3.4 Precise transaction statuses
 
-hledger explicitly models unmarked, pending, and cleared transactions and provides composable status filters. Beans will use only two application states, but hledger's status model maps naturally to their rendered representations:
+hledger explicitly models unmarked, pending, and cleared transactions and provides composable status filters. Dabloons will use only two application states, but hledger's status model maps naturally to their rendered representations:
 
 - `!` for a staged preview
 - `*` for reconciled transactions
 
 ### 3.5 Programmatic integration
 
-hledger provides structured JSON output, source positions, and an officially supported HTTP JSON interface. Beans will normally invoke hledger as a subprocess and normalize results into its own API models.
+hledger provides structured JSON output, source positions, and an officially supported HTTP JSON interface. Dabloons will normally invoke hledger as a subprocess and normalize results into its own API models.
 
 ### 3.6 Ledger features intentionally not required
 
-Ledger's embedded expressions, Python expressions, and journal programming facilities are undesirable for a deterministic AI-generated accounting system. Beans should use explicit amounts and declarative journal entries. Ledger may have an advantage for some advanced investment-lot workflows, but that is not currently the dominant requirement.
+Ledger's embedded expressions, Python expressions, and journal programming facilities are undesirable for a deterministic AI-generated accounting system. Dabloons should use explicit amounts and declarative journal entries. Ledger may have an advantage for some advanced investment-lot workflows, but that is not currently the dominant requirement.
 
 ## 4. Domain model
 
@@ -94,7 +94,7 @@ Every transaction has exactly one of two application states:
 
 #### Staged
 
-- Generated or proposed by AI.
+- Generated or proposed by AI, or entered manually by a user.
 - Not accounting truth.
 - May be edited, replaced, or deleted.
 - May have multiple immutable candidate revisions.
@@ -164,11 +164,11 @@ No source item may disappear between extraction and approval.
 
 ### 4.4 Reconciliation batch
 
-An atomic human approval event containing:
+An atomic individual human approval event containing:
 
 - reconciliation ID
 - frozen candidate revision hash
-- source statement IDs
+- optional source statement IDs
 - reviewer identity
 - approval time
 - created transactions
@@ -192,7 +192,7 @@ It contains:
 - commodity
 - through date
 - asserted balance
-- source statement
+- optional source statement
 - reconciliation batch
 - preceding watermark
 - approval metadata
@@ -203,11 +203,11 @@ Watermarks are account- and commodity-specific. A bank statement does not establ
 
 1. Watermark dates must move monotonically forward per account and commodity.
 2. A watermark must be backed by an exact hledger balance assertion.
-3. All statement items through the watermark must have an explicit disposition.
-4. The statement's opening balance, movements, and closing balance must be arithmetically consistent.
+3. A user may create a watermark directly from a manually observed balance; documentary evidence is not required.
+4. When a statement is present, its opening balance, movements, and closing balance must be arithmetically consistent.
 5. The candidate journal must produce the asserted closing balance.
-6. No transaction may later be reconciled with a primary accounting date at or before an existing watermark for an affected real-world account.
-7. A watermark confirms net balance completeness, not categorization correctness by itself. Human review and source-item provenance provide the semantic verification.
+6. No promotion may make an existing hledger balance assertion fail.
+7. A watermark confirms net balance completeness, not categorization correctness by itself. Individual human approval provides the semantic verification.
 8. Introducing an old-dated posting that changes a closed balance must fail validation rather than silently changing history.
 
 ## 6. Append-only accounting model
@@ -310,7 +310,8 @@ Input context should include only relevant information:
 
 The AI decides:
 
-- payee and note normalization
+- exact bank-statement text for `statement_description` and a concise semantic
+  meaning for `note`
 - counteraccount selection
 - transfer recognition
 - refund and reversal treatment
@@ -394,8 +395,8 @@ A representative compiled item:
     "id": "txn_01J...",
     "date": "2026-07-02",
     "status": "staged",
-    "payee": "Some Merchant",
-    "note": "",
+    "statement_description": "VISA PURCHASE APPLE STORE 0702",
+    "note": "iPad purchase",
     "postings": [
       {
         "account": "expenses:food",
@@ -414,7 +415,7 @@ A representative compiled item:
 }
 ```
 
-All quantities are decimal strings. IDs, source references, model details, and review decisions are preserved independently of journal formatting.
+All quantities are decimal strings. IDs, model details, and review decisions are preserved independently of journal formatting.
 
 ## 9. Deterministic journal renderer
 
@@ -423,11 +424,12 @@ The renderer converts approved typed IR into consistent hledger syntax. AI does 
 Example reconciled transaction:
 
 ```journal
-2026-07-02 * Some Merchant
+2026-07-02 * VISA PURCHASE APPLE STORE 0702
     ; id: txn_01J...
+    ; transaction-group: txg_01J...
+    ; note: iPad purchase
     ; reconciliation: rec_01J...
     ; statement: stmt_01J...
-    ; source-ref: page-2-row-14
     ; ai-run: run_01J...
     expenses:food                 S$12.30
     assets:bank:checking
@@ -506,7 +508,7 @@ The primary UI is a source-to-ledger review workspace.
 ```text
 +--------------------------+-----------------------------+
 | Original statement       | Candidate transaction       |
-| Page, image, or CSV grid | Date, payee, and postings   |
+| Page, image, or CSV grid | Date, statement description, and postings |
 | Highlight source item    | Amount, account, warnings   |
 +--------------------------+-----------------------------+
 | Opening | Debits | Credits | Closing | Difference      |
@@ -518,20 +520,22 @@ The reviewer can:
 - navigate source items;
 - see the corresponding candidate immediately;
 - inspect AI confidence and critic warnings;
-- edit date, payee, note, amount, commodity, or account;
+- edit date, statement description, note, amount, commodity, or account;
 - split or merge items;
 - match an item to an existing reconciled transaction;
 - match or replace a staged manual transaction;
 - mark an item ignored with a required reason;
 - view the exact rendered journal patch;
 - inspect statement arithmetic and resulting balances;
-- approve the frozen statement revision.
+- approve each frozen transaction revision individually.
 
 High confidence reduces visual noise but never skips human approval. Corrections made during review become retrievable examples for future AI runs, not mandatory deterministic import rules.
 
 ## 12. Approval and promotion protocol
 
-Approval is the only transition from staged to reconciled.
+Individual approval is the only transition from staged to reconciled. Reviewing a
+statement can produce many staged transactions, but there is no bulk approval
+operation.
 
 ```text
 mutable staged work
@@ -555,25 +559,22 @@ validate complete journal
 atomic batch-file rename
         |
         v
-Git commit and database finalization
+remove the staged journal file
 ```
 
 Detailed protocol:
 
-1. Freeze the reviewed candidate revision and compute its hash.
-2. Acquire a global journal promotion lock.
-3. Reload the latest reconciled state.
-4. Re-run duplicate, match, and watermark checks.
-5. Render the proposed batch to a temporary file.
-6. Assemble and validate the complete temporary journal.
-7. Atomically rename the batch into `reconciled/`.
-8. Write its content-addressed reconciliation manifest.
-9. Commit the batch and manifest to Git.
-10. Mark the database reconciliation record committed.
-11. Refresh projections and read models.
-12. Release the lock.
+1. Acquire the journal promotion lock.
+2. Reload the staged `!` transaction and verify its revision.
+3. Render the same transaction as a proposed `*` entry.
+4. Validate the reconciled journal plus the proposed entry.
+5. Atomically write the immutable entry into `reconciled/`.
+6. Remove its mutable file from `staged/`.
+7. Release the lock.
 
-Filesystem, Git, and database changes cannot share one true transaction. Every step must therefore be idempotent. Startup and background recovery compare reconciliation IDs, batch hashes, Git state, and database state to finish or report interrupted promotions safely.
+The reconciled file is written first so a crash cannot lose an approved
+transaction. Startup recovery removes any staged file whose transaction ID
+already exists in `reconciled/`.
 
 ## 13. REST API
 
@@ -593,10 +594,7 @@ GET    /v1/staged-transactions/{transactionId}
 PATCH  /v1/staged-transactions/{transactionId}
 DELETE /v1/staged-transactions/{transactionId}
 
-POST   /v1/reconciliations
-GET    /v1/reconciliations/{reconciliationId}
-POST   /v1/reconciliations/{reconciliationId}/approve
-POST   /v1/reconciliations/{reconciliationId}/reject
+POST   /v1/staged-transactions/{transactionId}/approve
 
 GET    /v1/reconciled-transactions
 GET    /v1/reconciled-transactions/{transactionId}
@@ -631,24 +629,18 @@ Web PWA / Phone app / Other clients
        |                    |
 Statement compiler     Accounting domain
        |                    |
-AI provider adapters   Reconciliation service
+AI provider adapters   hledger adapter
        |                    |
-Document storage       hledger engine adapter
-       |                    |
-       +---------+----------+
-                 |
-   +-------------+--------------+
-   |             |              |
-PostgreSQL   Object storage   Journal + Git
+Raw statement files    Journal files
 ```
 
 Proposed implementation stack:
 
 - Python
 - FastAPI and Pydantic
-- PostgreSQL for workflow state, immutable revisions, and projections
-- a background-job mechanism for model calls
-- encrypted filesystem or S3-compatible object storage for source documents
+- raw filesystem storage for uploaded statements
+- mutable `!` journal files for staged transactions
+- immutable `*` journal files for reconciled transactions and watermarks
 - hledger CLI invoked through a narrow adapter
 - responsive web/PWA frontend first
 
@@ -794,7 +786,7 @@ Support one representative statement from upload through approval:
 5. deterministic checks;
 6. minimal source/candidate review UI;
 7. human approval;
-8. immutable batch and high watermark;
+8. immutable per-transaction batches and an optional manual high watermark;
 9. REST query of reconciled results.
 
 Do not build dashboards, budgets, or a native phone app before this works reliably.
@@ -851,8 +843,7 @@ These should be resolved during Phase 0 without changing the core architecture:
 - AI provider(s), privacy terms, and fallback policy
 - hosting and authentication model
 - source-document retention duration
-- exact database and background-job technology
-- whether approval is always statement-wide or can approve smaller batches
+- background-job execution strategy
 - chart-of-accounts declaration and naming conventions
 - handling of transactions that affect two separately watermarked real-world accounts
 - exact correction-date and reporting policy
@@ -860,4 +851,4 @@ These should be resolved during Phase 0 without changing the core architecture:
 - offline requirements for the eventual phone client
 - whether reviewer corrections should be retrieved as examples automatically or curated first
 
-The default recommendation is statement-wide approval, strict closed-period accounting, explicit declared accounts/commodities, and automatic retrieval of previously approved similar transactions as AI context.
+The default recommendation is individual transaction approval, strict closed-period accounting, explicit declared accounts/commodities, and automatic retrieval of previously approved similar transactions as AI context.

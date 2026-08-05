@@ -57,6 +57,7 @@ export default function AccountDetailScreen() {
   const change = account.balance - opening;
   const positiveChange = change >= 0;
   const stats = accountStats(account.id);
+  const selectedAccountId = account.id;
 
   function selectPeriod(nextPeriod: Period) {
     void Haptics.selectionAsync();
@@ -66,7 +67,7 @@ export default function AccountDetailScreen() {
   function addTransaction() {
     router.push({
       pathname: '/transaction/new',
-      params: { origin: account.id },
+      params: { origin: selectedAccountId },
     });
   }
 

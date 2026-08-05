@@ -33,8 +33,9 @@ export default function NewTransactionScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ origin?: string }>();
   const { addTransaction } = useLedger();
-  const validOrigin = ledgerAccounts.some((account) => account.id === params.origin)
-    ? params.origin
+  const requestedOrigin = params.origin;
+  const validOrigin = requestedOrigin && ledgerAccounts.some((account) => account.id === requestedOrigin)
+    ? requestedOrigin
     : 'assets:checking';
   const [amountText, setAmountText] = useState('0');
   const [originId, setOriginId] = useState(validOrigin);

@@ -7,8 +7,16 @@ import {
 import { Tabs } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { useEffect } from 'react';
-import { Platform, Pressable, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import {
+  AccessibilityInfo,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  useColorScheme,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { SystemIcon } from '@/components/finance/system-icon';
@@ -72,18 +80,25 @@ function FloatingGlassTabBar({ state, descriptors, navigation }: BottomTabBarPro
   const glassApiAvailable = Platform.OS === 'ios' && isGlassEffectAPIAvailable();
   const liquidGlassAvailable = Platform.OS === 'ios' && isLiquidGlassAvailable();
   const nativeGlass = glassApiAvailable && liquidGlassAvailable;
+  const [reduceTransparency, setReduceTransparency] = useState<boolean | null>(null);
 
   useEffect(() => {
+    void AccessibilityInfo.isReduceTransparencyEnabled().then(setReduceTransparency);
+  }, [glassApiAvailable, liquidGlassAvailable]);
+
+  useEffect(() => {
+    if (reduceTransparency === null) return;
     console.info(
       '[Dabloons glass diagnostic]',
       JSON.stringify({
         glassApiAvailable,
         liquidGlassAvailable,
         os: Platform.OS,
+        reduceTransparency,
         version: Platform.Version,
       }),
     );
-  }, [glassApiAvailable, liquidGlassAvailable]);
+  }, [glassApiAvailable, liquidGlassAvailable, reduceTransparency]);
 
   const buttons = state.routes.map((route, index) => {
     const options = descriptors[route.key].options;
@@ -145,6 +160,14 @@ function FloatingGlassTabBar({ state, descriptors, navigation }: BottomTabBarPro
           shadowColor: scheme === 'dark' ? '#000000' : '#536070',
         },
       ]}>
+      {__DEV__ && (
+        <View style={[styles.diagnostic, { backgroundColor: theme.surface }]}>
+          <Text style={[styles.diagnosticText, { color: theme.text }]}>
+            iOS {String(Platform.Version)} · API {glassApiAvailable ? '1' : '0'} · LG{' '}
+            {liquidGlassAvailable ? '1' : '0'} · Reduce {reduceTransparency ? '1' : '0'}
+          </Text>
+        </View>
+      )}
       {nativeGlass ? (
         <GlassView
           glassEffectStyle="clear"
@@ -187,6 +210,19 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 9,
     fontWeight: '700',
+  },
+  diagnostic: {
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    position: 'absolute',
+    right: 0,
+    top: -24,
+  },
+  diagnosticText: {
+    fontSize: 9,
+    fontVariant: ['tabular-nums'],
+    fontWeight: '600',
   },
   glassBar: {
     alignItems: 'center',

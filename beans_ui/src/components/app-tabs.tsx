@@ -2,10 +2,12 @@ import { BlurView } from 'expo-blur';
 import {
   GlassView,
   isGlassEffectAPIAvailable,
+  isLiquidGlassAvailable,
 } from 'expo-glass-effect';
 import { Tabs } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { useEffect } from 'react';
 import { Platform, Pressable, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -67,7 +69,22 @@ function FloatingGlassTabBar({ state, descriptors, navigation }: BottomTabBarPro
   const scheme = useColorScheme() ?? 'light';
   const theme = Colors[scheme];
   const insets = useSafeAreaInsets();
-  const nativeGlass = Platform.OS === 'ios' && isGlassEffectAPIAvailable();
+  const glassApiAvailable = Platform.OS === 'ios' && isGlassEffectAPIAvailable();
+  const liquidGlassAvailable = Platform.OS === 'ios' && isLiquidGlassAvailable();
+  const nativeGlass = glassApiAvailable && liquidGlassAvailable;
+
+  useEffect(() => {
+    console.info(
+      '[Dabloons glass diagnostic]',
+      JSON.stringify({
+        glassApiAvailable,
+        liquidGlassAvailable,
+        os: Platform.OS,
+        version: Platform.Version,
+      }),
+    );
+  }, [glassApiAvailable, liquidGlassAvailable]);
+
   const buttons = state.routes.map((route, index) => {
     const options = descriptors[route.key].options;
     const focused = state.index === index;

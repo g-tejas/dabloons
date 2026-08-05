@@ -1,19 +1,73 @@
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
+import {
+  GlassView,
+  isGlassEffectAPIAvailable,
+  isLiquidGlassAvailable,
+} from 'expo-glass-effect';
 import * as Haptics from 'expo-haptics';
-import React, { useMemo, useRef, useState } from 'react';
+import { LinearGradient as ExpoLinearGradient } from 'expo-linear-gradient';
+import React, { PropsWithChildren, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   LayoutChangeEvent,
   PanResponder,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
   View,
+  ViewStyle,
 } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 
 import { Transaction } from './data';
 import { colors, fonts, radii } from './theme';
+
+type GlassSurfaceProps = PropsWithChildren<{
+  style?: ViewStyle | ViewStyle[];
+  tintColor?: string;
+  interactive?: boolean;
+}>;
+
+export function GlassSurface({
+  children,
+  style,
+  tintColor = 'rgba(255,255,255,0.06)',
+  interactive = false,
+}: GlassSurfaceProps) {
+  const nativeGlass =
+    Platform.OS === 'ios' &&
+    isGlassEffectAPIAvailable() &&
+    isLiquidGlassAvailable();
+
+  return (
+    <View style={[styles.glassSurface, style]}>
+      {nativeGlass ? (
+        <GlassView
+          glassEffectStyle="regular"
+          isInteractive={interactive}
+          style={StyleSheet.absoluteFill}
+          tintColor={tintColor}
+        />
+      ) : (
+        <BlurView
+          intensity={44}
+          style={StyleSheet.absoluteFill}
+          tint="systemUltraThinMaterialDark"
+        />
+      )}
+      <ExpoLinearGradient
+        colors={['rgba(255,255,255,0.12)', 'rgba(255,255,255,0.015)']}
+        end={{ x: 0.8, y: 1 }}
+        pointerEvents="none"
+        start={{ x: 0.1, y: 0 }}
+        style={styles.glassSheen}
+      />
+      {children}
+    </View>
+  );
+}
 
 export function IconButton({
   name,
@@ -29,9 +83,11 @@ export function IconButton({
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
       onPress={onPress}
-      style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
+      style={({ pressed }) => [pressed && styles.pressed]}
     >
-      <Ionicons color={colors.text} name={name} size={20} />
+      <GlassSurface interactive style={styles.iconButton}>
+        <Ionicons color={colors.text} name={name} size={19} />
+      </GlassSurface>
     </Pressable>
   );
 }
@@ -56,9 +112,9 @@ export function ActionButton({
       onPressOut={() => Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start()}
     >
       <Animated.View style={[styles.action, { transform: [{ scale }] }]}>
-        <View style={styles.actionIcon}>
-          <Ionicons color={colors.background} name={icon} size={20} />
-        </View>
+        <GlassSurface interactive style={styles.actionIcon} tintColor="rgba(199,255,89,0.16)">
+          <Ionicons color={colors.text} name={icon} size={20} />
+        </GlassSurface>
         <Text style={styles.actionLabel}>{label}</Text>
       </Animated.View>
     </Pressable>
@@ -229,13 +285,18 @@ export function formatCurrency(value: number, digits = 2) {
 
 const styles = StyleSheet.create({
   pressed: { opacity: 0.65 },
-  rowPressed: { backgroundColor: colors.surfaceRaised, transform: [{ scale: 0.99 }] },
+  rowPressed: { backgroundColor: 'rgba(255,255,255,0.055)', transform: [{ scale: 0.99 }] },
+  glassSurface: {
+    borderColor: 'rgba(255,255,255,0.16)',
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
+  },
+  glassSheen: {
+    ...StyleSheet.absoluteFillObject,
+  },
   iconButton: {
     alignItems: 'center',
-    backgroundColor: colors.surfaceRaised,
-    borderColor: colors.border,
     borderRadius: 22,
-    borderWidth: 1,
     height: 44,
     justifyContent: 'center',
     width: 44,
@@ -243,13 +304,12 @@ const styles = StyleSheet.create({
   action: { alignItems: 'center', gap: 8, width: 72 },
   actionIcon: {
     alignItems: 'center',
-    backgroundColor: colors.accent,
     borderRadius: 25,
     height: 50,
     justifyContent: 'center',
     width: 50,
   },
-  actionLabel: { color: colors.muted, fontFamily: fonts.medium, fontSize: 12 },
+  actionLabel: { color: colors.text, fontFamily: fonts.medium, fontSize: 12 },
   transaction: {
     alignItems: 'center',
     borderRadius: radii.md,

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import React, { useRef, useState } from 'react';
 import {
@@ -14,9 +14,9 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { formatCurrency } from './src/components';
+import { formatCurrency, GlassSurface } from './src/components';
 import { transactions } from './src/data';
 import { ActivityScreen, HomeScreen, InsightsScreen, PlanScreen } from './src/screens';
 import { colors, fonts, radii } from './src/theme';
@@ -31,6 +31,7 @@ const tabs: { label: Tab; icon: keyof typeof Ionicons.glyphMap; activeIcon: keyo
 ];
 
 function FinanceApp() {
+  const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<Tab>('Home');
   const [addOpen, setAddOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<string | null>(null);
@@ -85,6 +86,17 @@ function FinanceApp() {
   return (
     <SafeAreaView edges={['top']} style={styles.safeArea}>
       <StatusBar style="light" />
+      <View pointerEvents="none" style={styles.ambient}>
+        <LinearGradient
+          colors={['#080A12', '#0D1120', '#08090F']}
+          end={{ x: 1, y: 1 }}
+          start={{ x: 0, y: 0 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={styles.orbLime} />
+        <View style={styles.orbBlue} />
+        <View style={styles.orbPurple} />
+      </View>
       <Animated.View style={[styles.content, { opacity: fade }]}>
         {activeTab === 'Home' && <HomeScreen {...screenProps} />}
         {activeTab === 'Activity' && <ActivityScreen {...screenProps} />}
@@ -92,8 +104,8 @@ function FinanceApp() {
         {activeTab === 'Insights' && <InsightsScreen {...screenProps} />}
       </Animated.View>
 
-      <View style={styles.navWrap}>
-        <BlurView intensity={56} style={styles.nav} tint="dark">
+      <View style={[styles.navWrap, { bottom: Math.max(insets.bottom, 12) }]}>
+        <GlassSurface style={styles.nav} tintColor="rgba(20,24,35,0.42)">
           {tabs.map((tab) => {
             const active = tab.label === activeTab;
             return (
@@ -116,18 +128,31 @@ function FinanceApp() {
               </Pressable>
             );
           })}
-        </BlurView>
+        </GlassSurface>
       </View>
 
-      <Animated.View style={[styles.toast, { pointerEvents: 'none', transform: [{ translateY: toastY }] }]}>
-        <Ionicons color={colors.background} name="checkmark-circle" size={18} />
-        <Text numberOfLines={1} style={styles.toastText}>{toast}</Text>
+      <Animated.View
+        style={[
+          styles.toastWrap,
+          {
+            pointerEvents: 'none',
+            top: insets.top + 10,
+            transform: [{ translateY: toastY }],
+          },
+        ]}
+      >
+        <GlassSurface style={styles.toast} tintColor="rgba(20,24,35,0.76)">
+          <View style={styles.toastIcon}>
+            <Ionicons color={colors.background} name="checkmark" size={13} />
+          </View>
+          <Text numberOfLines={1} style={styles.toastText}>{toast}</Text>
+        </GlassSurface>
       </Animated.View>
 
       <Modal animationType="slide" onRequestClose={() => setAddOpen(false)} transparent visible={addOpen}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalBackdrop}>
           <Pressable onPress={() => setAddOpen(false)} style={StyleSheet.absoluteFill} />
-          <View style={styles.sheet}>
+          <GlassSurface style={styles.sheet} tintColor="rgba(14,17,26,0.94)">
             <View style={styles.handle} />
             <View style={styles.sheetHeader}>
               <Pressable hitSlop={12} onPress={() => setAddOpen(false)}>
@@ -180,7 +205,7 @@ function FinanceApp() {
             <Pressable onPress={saveTransaction} style={({ pressed }) => [styles.saveButton, pressed && styles.buttonPressed]}>
               <Text style={styles.saveButtonText}>Add transaction</Text>
             </Pressable>
-          </View>
+          </GlassSurface>
         </KeyboardAvoidingView>
       </Modal>
 
@@ -188,7 +213,7 @@ function FinanceApp() {
         <View style={styles.modalBackdrop}>
           <Pressable onPress={() => setSelectedTransaction(null)} style={StyleSheet.absoluteFill} />
           {selected && (
-            <View style={[styles.sheet, styles.detailSheet]}>
+            <GlassSurface style={[styles.sheet, styles.detailSheet]} tintColor="rgba(14,17,26,0.94)">
               <View style={styles.handle} />
               <View style={[styles.detailIcon, { backgroundColor: `${selected.color}20` }]}>
                 <Ionicons color={selected.color} name={selected.icon as keyof typeof Ionicons.glyphMap} size={28} />
@@ -205,7 +230,7 @@ function FinanceApp() {
               <Pressable onPress={() => setSelectedTransaction(null)} style={styles.detailDone}>
                 <Text style={styles.detailDoneText}>Done</Text>
               </Pressable>
-            </View>
+            </GlassSurface>
           )}
         </View>
       </Modal>
@@ -232,43 +257,81 @@ export default function App() {
 
 const styles = StyleSheet.create({
   safeArea: { backgroundColor: colors.background, flex: 1 },
+  ambient: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
+  orbLime: {
+    backgroundColor: 'rgba(174,255,74,0.16)',
+    borderRadius: 190,
+    height: 380,
+    position: 'absolute',
+    right: -220,
+    top: 60,
+    width: 380,
+  },
+  orbBlue: {
+    backgroundColor: 'rgba(67,142,255,0.13)',
+    borderRadius: 170,
+    height: 340,
+    left: -220,
+    position: 'absolute',
+    top: 360,
+    width: 340,
+  },
+  orbPurple: {
+    backgroundColor: 'rgba(155,113,255,0.11)',
+    borderRadius: 180,
+    bottom: -130,
+    height: 360,
+    position: 'absolute',
+    right: -160,
+    width: 360,
+  },
   content: { flex: 1 },
-  navWrap: { bottom: 18, left: 16, position: 'absolute', right: 16 },
+  navWrap: { left: 16, position: 'absolute', right: 16 },
   nav: {
-    borderColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 28,
-    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 31,
     flexDirection: 'row',
-    height: 70,
-    overflow: 'hidden',
+    height: 64,
     paddingHorizontal: 8,
   },
-  navItem: { alignItems: 'center', flex: 1, justifyContent: 'center', paddingTop: 5 },
-  navIcon: { alignItems: 'center', borderRadius: 18, height: 31, justifyContent: 'center', width: 38 },
-  navIconActive: { backgroundColor: colors.accent },
-  navLabel: { color: colors.muted, fontFamily: fonts.medium, fontSize: 9, marginTop: 2 },
+  navItem: { alignItems: 'center', flex: 1, justifyContent: 'center', paddingTop: 3 },
+  navIcon: { alignItems: 'center', borderRadius: 18, height: 29, justifyContent: 'center', width: 42 },
+  navIconActive: {
+    backgroundColor: colors.accent,
+    shadowColor: colors.accent,
+    shadowOffset: { height: 0, width: 0 },
+    shadowOpacity: 0.32,
+    shadowRadius: 12,
+  },
+  navLabel: { color: colors.muted, fontFamily: fonts.medium, fontSize: 9, marginTop: 1 },
   navLabelActive: { color: colors.text },
+  toastWrap: {
+    alignSelf: 'center',
+    maxWidth: '88%',
+    position: 'absolute',
+  },
   toast: {
     alignItems: 'center',
-    alignSelf: 'center',
-    backgroundColor: colors.accent,
     borderRadius: radii.pill,
     flexDirection: 'row',
-    gap: 7,
-    maxWidth: '86%',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    position: 'absolute',
-    top: 8,
+    gap: 9,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
   },
-  toastText: { color: colors.background, fontFamily: fonts.demi, fontSize: 12 },
+  toastIcon: {
+    alignItems: 'center',
+    backgroundColor: colors.accent,
+    borderRadius: 10,
+    height: 20,
+    justifyContent: 'center',
+    width: 20,
+  },
+  toastText: { color: colors.text, fontFamily: fonts.demi, fontSize: 12 },
   modalBackdrop: { backgroundColor: 'rgba(0,0,0,0.62)', flex: 1, justifyContent: 'flex-end' },
   sheet: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
+    borderColor: 'rgba(255,255,255,0.18)',
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
-    borderWidth: 1,
     paddingBottom: 34,
     paddingHorizontal: 20,
   },

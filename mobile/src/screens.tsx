@@ -12,6 +12,7 @@ import {
 import {
   ActionButton,
   formatCurrency,
+  GlassSurface,
   IconButton,
   LineChart,
   SectionHeader,
@@ -69,48 +70,57 @@ export function HomeScreen({ onAdd, onTransactionPress, onToast }: ScreenProps) 
         <IconButton accessibilityLabel="Notifications" name="notifications-outline" onPress={() => onToast('You’re all caught up')} />
       </View>
 
-      <View style={styles.balanceBlock}>
-        <View style={styles.balanceLabelRow}>
-          <Text style={styles.balanceLabel}>NET WORTH</Text>
-          <View style={styles.privateBadge}>
-            <Ionicons color={colors.muted} name="lock-closed" size={10} />
-            <Text style={styles.privateText}>Private</Text>
+      <GlassSurface style={styles.heroCard} tintColor="rgba(42,49,62,0.28)">
+        <LinearGradient
+          colors={['rgba(205,255,106,0.09)', 'rgba(78,143,255,0.03)', 'transparent']}
+          end={{ x: 1, y: 1 }}
+          pointerEvents="none"
+          start={{ x: 0, y: 0 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={styles.balanceBlock}>
+          <View style={styles.balanceLabelRow}>
+            <Text style={styles.balanceLabel}>TOTAL BALANCE</Text>
+            <View style={styles.privateBadge}>
+              <Ionicons color={colors.muted} name="eye-outline" size={11} />
+              <Text style={styles.privateText}>Private</Text>
+            </View>
+          </View>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.balance}>
+            {formatCurrency(shownBalance)}
+          </Text>
+          <View style={styles.changeRow}>
+            <View style={styles.changeBadge}>
+              <Ionicons color={colors.green} name="arrow-up" size={12} />
+              <Text style={styles.changeText}>4.8%</Text>
+            </View>
+            <Text style={styles.changeCaption}>+$1,094 this month</Text>
           </View>
         </View>
-        <Text adjustsFontSizeToFit numberOfLines={1} style={styles.balance}>
-          {formatCurrency(shownBalance)}
-        </Text>
-        <View style={styles.changeRow}>
-          <View style={styles.changeBadge}>
-            <Ionicons color={colors.green} name="arrow-up" size={12} />
-            <Text style={styles.changeText}>4.8%</Text>
+
+        <View style={styles.chartWrap}>
+          <LineChart height={148} values={values} onValueChange={setInspectedBalance} />
+          <View style={styles.periodRow}>
+            {Object.keys(balanceHistory).map((item) => (
+              <Pressable
+                accessibilityRole="button"
+                key={item}
+                onPress={() => setPeriod(item)}
+                style={[styles.period, period === item && styles.periodActive]}
+              >
+                <Text style={[styles.periodText, period === item && styles.periodTextActive]}>{item}</Text>
+              </Pressable>
+            ))}
           </View>
-          <Text style={styles.changeCaption}>+$1,094 this month</Text>
         </View>
-      </View>
+      </GlassSurface>
 
-      <View style={styles.chartWrap}>
-        <LineChart values={values} onValueChange={setInspectedBalance} />
-        <View style={styles.periodRow}>
-          {Object.keys(balanceHistory).map((item) => (
-            <Pressable
-              accessibilityRole="button"
-              key={item}
-              onPress={() => setPeriod(item)}
-              style={[styles.period, period === item && styles.periodActive]}
-            >
-              <Text style={[styles.periodText, period === item && styles.periodTextActive]}>{item}</Text>
-            </Pressable>
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.actionsRow}>
+      <GlassSurface style={styles.actionsRow} tintColor="rgba(20,24,35,0.24)">
         <ActionButton icon="add" label="Add" onPress={onAdd} />
         <ActionButton icon="paper-plane-outline" label="Send" onPress={() => onToast('Transfers are coming soon')} />
         <ActionButton icon="scan-outline" label="Scan" onPress={() => onToast('Receipt scanner preview')} />
         <ActionButton icon="ellipsis-horizontal" label="More" onPress={() => onToast('More actions')} />
-      </View>
+      </GlassSurface>
 
       <View style={styles.section}>
         <SectionHeader action="Manage" onPress={() => onToast('Account management')} title="Accounts" />
@@ -120,19 +130,18 @@ export function HomeScreen({ onAdd, onTransactionPress, onToast }: ScreenProps) 
           showsHorizontalScrollIndicator={false}
         >
           {accounts.map((account, index) => (
-            <LinearGradient
-              colors={
-                index === 0
-                  ? ['#243019', '#11170D']
-                  : index === 1
-                    ? ['#29243A', '#15131E']
-                    : ['#192A36', '#0F171C']
-              }
-              end={{ x: 1, y: 1 }}
+            <GlassSurface
               key={account.id}
-              start={{ x: 0, y: 0 }}
-              style={[styles.accountCard, { borderColor: `${account.color}40` }]}
+              style={[styles.accountCard, { borderColor: `${account.color}52` }]}
+              tintColor={`${account.color}12`}
             >
+              <LinearGradient
+                colors={[`${account.color}1F`, 'rgba(12,14,22,0.28)', `${account.color}08`]}
+                end={{ x: 1, y: 1 }}
+                pointerEvents="none"
+                start={{ x: 0, y: 0 }}
+                style={StyleSheet.absoluteFill}
+              />
               <View style={styles.accountTop}>
                 <View style={[styles.accountGlyph, { backgroundColor: account.color }]}>
                   <Ionicons color={colors.background} name={index === 2 ? 'trending-up' : 'wallet-outline'} size={17} />
@@ -145,7 +154,7 @@ export function HomeScreen({ onAdd, onTransactionPress, onToast }: ScreenProps) 
                 <Text style={styles.accountName}>{account.name}</Text>
                 <Text style={[styles.accountChange, { color: account.color }]}>{account.change}</Text>
               </View>
-            </LinearGradient>
+            </GlassSurface>
           ))}
           <Pressable onPress={onAdd} style={styles.addAccountCard}>
             <View style={styles.addCircle}>
@@ -156,7 +165,7 @@ export function HomeScreen({ onAdd, onTransactionPress, onToast }: ScreenProps) 
         </ScrollView>
       </View>
 
-      <View style={styles.insightCard}>
+      <GlassSurface style={styles.insightCard} tintColor="rgba(199,255,89,0.08)">
         <View style={styles.insightIcon}>
           <Ionicons color={colors.accent} name="sparkles" size={18} />
         </View>
@@ -166,7 +175,7 @@ export function HomeScreen({ onAdd, onTransactionPress, onToast }: ScreenProps) 
           <Text style={styles.insightMeta}>Dining out made the biggest difference.</Text>
         </View>
         <Ionicons color={colors.muted} name="chevron-forward" size={18} />
-      </View>
+      </GlassSurface>
 
       <View style={styles.section}>
         <SectionHeader action="See all" title="Recent activity" />
@@ -193,7 +202,7 @@ export function ActivityScreen({ onAdd, onTransactionPress }: ScreenProps) {
         right={<IconButton accessibilityLabel="Search activity" name="search-outline" />}
         title="Activity"
       />
-      <View style={styles.activitySummary}>
+      <GlassSurface style={styles.activitySummary} tintColor="rgba(90,120,180,0.08)">
         <View>
           <Text style={styles.summaryLabel}>MONEY IN</Text>
           <Text style={[styles.summaryValue, { color: colors.green }]}>+$3,980</Text>
@@ -203,7 +212,7 @@ export function ActivityScreen({ onAdd, onTransactionPress }: ScreenProps) {
           <Text style={styles.summaryLabel}>MONEY OUT</Text>
           <Text style={styles.summaryValue}>−$1,732</Text>
         </View>
-      </View>
+      </GlassSurface>
       <View style={styles.filterRow}>
         {['All', 'Spent', 'Income'].map((item) => (
           <Pressable
@@ -239,7 +248,14 @@ export function PlanScreen({ onToast }: ScreenProps) {
         right={<IconButton accessibilityLabel="Budget settings" name="options-outline" onPress={() => onToast('Budget settings')} />}
         title="Your spending plan"
       />
-      <LinearGradient colors={['#263617', '#131A0E']} style={styles.planHero}>
+      <GlassSurface style={styles.planHero} tintColor="rgba(199,255,89,0.11)">
+        <LinearGradient
+          colors={['rgba(199,255,89,0.15)', 'rgba(77,107,43,0.04)', 'transparent']}
+          end={{ x: 1, y: 1 }}
+          pointerEvents="none"
+          start={{ x: 0, y: 0 }}
+          style={StyleSheet.absoluteFill}
+        />
         <View style={styles.planHeroTop}>
           <Text style={styles.planLabel}>LEFT TO SPEND</Text>
           <View style={styles.onTrackPill}>
@@ -252,11 +268,11 @@ export function PlanScreen({ onToast }: ScreenProps) {
         <View style={styles.heroProgress}>
           <View style={[styles.progressFill, { width: '68%', backgroundColor: colors.accent }]} />
         </View>
-      </LinearGradient>
+      </GlassSurface>
 
       <View style={styles.section}>
         <SectionHeader action="Edit" onPress={() => onToast('Budget editor')} title="Categories" />
-        <View style={styles.budgetCard}>
+        <GlassSurface style={styles.budgetCard} tintColor="rgba(60,72,92,0.08)">
           {budgets.map((budget, index) => {
             const percent = Math.min((budget.spent / budget.limit) * 100, 100);
             return (
@@ -278,10 +294,10 @@ export function PlanScreen({ onToast }: ScreenProps) {
               </View>
             );
           })}
-        </View>
+        </GlassSurface>
       </View>
 
-      <View style={styles.goalCard}>
+      <GlassSurface style={styles.goalCard} tintColor="rgba(169,152,255,0.12)">
         <View style={styles.goalHeader}>
           <View>
             <Text style={styles.goalEyebrow}>SAVINGS GOAL</Text>
@@ -293,7 +309,7 @@ export function PlanScreen({ onToast }: ScreenProps) {
         <View style={styles.progressTrack}>
           <View style={[styles.progressFill, { width: '68%', backgroundColor: colors.purple }]} />
         </View>
-      </View>
+      </GlassSurface>
     </ScrollView>
   );
 }
@@ -306,7 +322,7 @@ export function InsightsScreen({ onToast }: ScreenProps) {
         right={<IconButton accessibilityLabel="Export report" name="share-outline" onPress={() => onToast('Report ready to share')} />}
         title="August insights"
       />
-      <View style={styles.insightHero}>
+      <GlassSurface style={styles.insightHero} tintColor="rgba(72,110,170,0.08)">
         <Text style={styles.insightHeroLabel}>TOTAL SPENT</Text>
         <Text style={styles.insightHeroValue}>$1,732.48</Text>
         <View style={styles.insightComparison}>
@@ -332,11 +348,11 @@ export function InsightsScreen({ onToast }: ScreenProps) {
             </View>
           ))}
         </View>
-      </View>
+      </GlassSurface>
 
       <View style={styles.section}>
         <SectionHeader title="Cash flow" />
-        <View style={styles.cashflowCard}>
+        <GlassSurface style={styles.cashflowCard} tintColor="rgba(199,255,89,0.05)">
           <View style={styles.cashflowHeader}>
             <View>
               <Text style={styles.cashflowLabel}>NET THIS MONTH</Text>
@@ -347,7 +363,7 @@ export function InsightsScreen({ onToast }: ScreenProps) {
             </View>
           </View>
           <LineChart height={120} interactive={false} values={[12, 28, 21, 43, 39, 62, 58, 84]} />
-        </View>
+        </GlassSurface>
       </View>
 
       <Pressable onPress={() => onToast('Nice work — keep it going!')} style={styles.coachCard}>
@@ -366,8 +382,8 @@ export function InsightsScreen({ onToast }: ScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  scrollContent: { paddingBottom: 130, paddingHorizontal: 20, paddingTop: 12 },
-  homeHeader: { alignItems: 'center', flexDirection: 'row', marginBottom: 34, paddingTop: 2 },
+  scrollContent: { paddingBottom: 128, paddingHorizontal: 18, paddingTop: 10 },
+  homeHeader: { alignItems: 'center', flexDirection: 'row', marginBottom: 22, paddingHorizontal: 2, paddingTop: 2 },
   avatar: {
     alignItems: 'center',
     backgroundColor: colors.accent,
@@ -391,7 +407,15 @@ const styles = StyleSheet.create({
   homeGreeting: { flex: 1, gap: 2, marginLeft: 12 },
   eyebrow: { color: colors.muted, fontFamily: fonts.demi, fontSize: 10, letterSpacing: 1.35 },
   greeting: { color: colors.text, fontFamily: fonts.demi, fontSize: 15 },
-  balanceBlock: { alignItems: 'center', marginBottom: 6 },
+  heroCard: {
+    borderColor: 'rgba(255,255,255,0.18)',
+    borderRadius: 30,
+    marginBottom: 14,
+    paddingBottom: 12,
+    paddingHorizontal: 12,
+    paddingTop: 24,
+  },
+  balanceBlock: { alignItems: 'center', marginBottom: 2 },
   balanceLabelRow: { alignItems: 'center', flexDirection: 'row', gap: 8 },
   balanceLabel: { color: colors.muted, fontFamily: fonts.demi, fontSize: 11, letterSpacing: 1.4 },
   privateBadge: {
@@ -404,11 +428,11 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   privateText: { color: colors.muted, fontFamily: fonts.medium, fontSize: 9 },
-  balance: { color: colors.text, fontFamily: fonts.demi, fontSize: 42, letterSpacing: -2, marginTop: 8 },
+  balance: { color: colors.text, fontFamily: fonts.demi, fontSize: 43, letterSpacing: -2.2, marginTop: 8 },
   changeRow: { alignItems: 'center', flexDirection: 'row', gap: 8, marginTop: 8 },
   changeBadge: {
     alignItems: 'center',
-    backgroundColor: '#17301E',
+    backgroundColor: 'rgba(66,220,112,0.14)',
     borderRadius: radii.pill,
     flexDirection: 'row',
     gap: 2,
@@ -417,21 +441,27 @@ const styles = StyleSheet.create({
   },
   changeText: { color: colors.green, fontFamily: fonts.demi, fontSize: 11 },
   changeCaption: { color: colors.muted, fontFamily: fonts.medium, fontSize: 11 },
-  chartWrap: { marginHorizontal: -8, marginTop: 10 },
-  periodRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 2 },
+  chartWrap: { marginTop: 4 },
+  periodRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 0 },
   period: { borderRadius: radii.pill, paddingHorizontal: 16, paddingVertical: 7 },
-  periodActive: { backgroundColor: colors.surfaceRaised },
+  periodActive: { backgroundColor: 'rgba(255,255,255,0.12)' },
   periodText: { color: colors.subtle, fontFamily: fonts.demi, fontSize: 11 },
   periodTextActive: { color: colors.text },
-  actionsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 34, marginTop: 26 },
+  actionsRow: {
+    borderRadius: 25,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 30,
+    paddingHorizontal: 10,
+    paddingVertical: 14,
+  },
   section: { marginBottom: 30 },
   accountRail: { gap: 12, paddingRight: 20 },
   accountCard: {
     borderRadius: radii.lg,
-    borderWidth: 1,
-    height: 184,
-    padding: 18,
-    width: 264,
+    height: 190,
+    padding: 19,
+    width: 278,
   },
   accountTop: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   accountGlyph: { alignItems: 'center', borderRadius: 15, height: 30, justifyContent: 'center', width: 30 },
@@ -447,7 +477,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     borderStyle: 'dashed',
     borderWidth: 1,
-    height: 184,
+    height: 190,
     justifyContent: 'center',
     width: 132,
   },
@@ -462,10 +492,7 @@ const styles = StyleSheet.create({
   addAccountText: { color: colors.muted, fontFamily: fonts.medium, fontSize: 11, marginTop: 10 },
   insightCard: {
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
     borderRadius: radii.lg,
-    borderWidth: 1,
     flexDirection: 'row',
     marginBottom: 30,
     padding: 16,
@@ -485,10 +512,7 @@ const styles = StyleSheet.create({
   screenHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginBottom: 30, marginTop: 6 },
   pageTitle: { color: colors.text, fontFamily: fonts.demi, fontSize: 29, letterSpacing: -1, marginTop: 3 },
   activitySummary: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
     borderRadius: radii.lg,
-    borderWidth: 1,
     flexDirection: 'row',
     marginBottom: 20,
     padding: 20,
@@ -522,7 +546,7 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
   },
   fullButtonText: { color: colors.background, fontFamily: fonts.demi, fontSize: 14 },
-  planHero: { borderRadius: radii.xl, marginBottom: 30, padding: 22 },
+  planHero: { borderRadius: 30, marginBottom: 30, padding: 22 },
   planHeroTop: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   planLabel: { color: '#A6B88A', fontFamily: fonts.demi, fontSize: 9, letterSpacing: 1.2 },
   onTrackPill: {
@@ -541,10 +565,7 @@ const styles = StyleSheet.create({
   heroProgress: { backgroundColor: '#354423', borderRadius: 5, height: 7, marginTop: 20, overflow: 'hidden' },
   progressFill: { borderRadius: 5, height: '100%' },
   budgetCard: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
     borderRadius: radii.lg,
-    borderWidth: 1,
     paddingHorizontal: 16,
   },
   budgetRow: { alignItems: 'center', flexDirection: 'row', paddingVertical: 16 },
@@ -557,10 +578,7 @@ const styles = StyleSheet.create({
   budgetLimit: { color: colors.muted, fontFamily: fonts.medium },
   progressTrack: { backgroundColor: colors.surfaceSoft, borderRadius: 5, height: 6, overflow: 'hidden' },
   goalCard: {
-    backgroundColor: '#171421',
-    borderColor: '#312B46',
     borderRadius: radii.lg,
-    borderWidth: 1,
     padding: 20,
   },
   goalHeader: { flexDirection: 'row', justifyContent: 'space-between' },
@@ -570,10 +588,7 @@ const styles = StyleSheet.create({
   goalValue: { color: colors.text, fontFamily: fonts.demi, fontSize: 15, marginBottom: 12, marginTop: 22 },
   goalLimit: { color: colors.muted, fontFamily: fonts.medium, fontSize: 11 },
   insightHero: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
     borderRadius: radii.xl,
-    borderWidth: 1,
     marginBottom: 30,
     padding: 22,
   },
@@ -588,10 +603,7 @@ const styles = StyleSheet.create({
   legendLabel: { color: colors.text, fontFamily: fonts.medium, fontSize: 11 },
   legendValue: { color: colors.muted, fontFamily: fonts.regular, fontSize: 9, marginTop: 1 },
   cashflowCard: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
     borderRadius: radii.lg,
-    borderWidth: 1,
     padding: 18,
   },
   cashflowHeader: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },

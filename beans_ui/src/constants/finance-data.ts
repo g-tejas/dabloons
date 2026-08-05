@@ -1,4 +1,5 @@
 import type MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import type { SFSymbol } from 'expo-symbols';
 import type { ComponentProps } from 'react';
 
 export type FinanceIconName = ComponentProps<typeof MaterialIcons>['name'];
@@ -12,6 +13,19 @@ export type BudgetCategory = {
   budget: number;
 };
 
+export type LedgerAccountKind = 'Asset' | 'Expense' | 'Income' | 'Liability' | 'Equity';
+
+export type LedgerAccount = {
+  id: string;
+  name: string;
+  detail: string;
+  kind: LedgerAccountKind;
+  balance: number;
+  icon: FinanceIconName;
+  symbol: SFSymbol;
+  color: string;
+};
+
 export type FinanceTransaction = {
   id: string;
   merchant: string;
@@ -20,6 +34,8 @@ export type FinanceTransaction = {
   amount: number;
   icon: FinanceIconName;
   color: string;
+  originAccount?: string;
+  destinationAccount?: string;
 };
 
 export type ReconciliationItem = {
@@ -42,6 +58,121 @@ export const overview = {
   income: 8240,
   spending: 5186.44,
   savingsRate: 28,
+};
+
+export const ledgerAccounts: LedgerAccount[] = [
+  {
+    id: 'assets:checking',
+    name: 'Everyday Checking',
+    detail: 'First Union ••2048',
+    kind: 'Asset',
+    balance: 8421.18,
+    icon: 'account-balance',
+    symbol: 'building.columns.fill',
+    color: '#007AFF',
+  },
+  {
+    id: 'assets:savings',
+    name: 'Emergency Savings',
+    detail: 'First Union ••9012',
+    kind: 'Asset',
+    balance: 42385.68,
+    icon: 'savings',
+    symbol: 'banknote.fill',
+    color: '#34C759',
+  },
+  {
+    id: 'liabilities:credit-cards',
+    name: 'Credit Cards',
+    detail: '2 cards · $842 due Sep 3',
+    kind: 'Liability',
+    balance: -2186.44,
+    icon: 'credit-card',
+    symbol: 'creditcard.fill',
+    color: '#FF9500',
+  },
+  {
+    id: 'expenses:food',
+    name: 'Food & Dining',
+    detail: 'Expense account',
+    kind: 'Expense',
+    balance: 486.2,
+    icon: 'restaurant',
+    symbol: 'fork.knife',
+    color: '#E47752',
+  },
+  {
+    id: 'expenses:housing',
+    name: 'Home',
+    detail: 'Expense account',
+    kind: 'Expense',
+    balance: 1840,
+    icon: 'home',
+    symbol: 'house.fill',
+    color: '#6D74C9',
+  },
+  {
+    id: 'expenses:transport',
+    name: 'Getting Around',
+    detail: 'Expense account',
+    kind: 'Expense',
+    balance: 218.64,
+    icon: 'directions-car',
+    symbol: 'car.fill',
+    color: '#3D8DB8',
+  },
+  {
+    id: 'expenses:subscriptions',
+    name: 'Subscriptions',
+    detail: 'Expense account',
+    kind: 'Expense',
+    balance: 84.97,
+    icon: 'subscriptions',
+    symbol: 'repeat',
+    color: '#A35D9B',
+  },
+  {
+    id: 'income:salary',
+    name: 'Salary',
+    detail: 'Income account',
+    kind: 'Income',
+    balance: 8240,
+    icon: 'work',
+    symbol: 'briefcase.fill',
+    color: '#278662',
+  },
+  {
+    id: 'equity:opening-balances',
+    name: 'Opening Balances',
+    detail: 'Equity account',
+    kind: 'Equity',
+    balance: 0,
+    icon: 'balance',
+    symbol: 'scale.3d',
+    color: '#AF52DE',
+  },
+  {
+    id: 'equity:owner-contributions',
+    name: 'Owner Contributions',
+    detail: 'Equity account',
+    kind: 'Equity',
+    balance: 0,
+    icon: 'account-balance-wallet',
+    symbol: 'person.crop.circle.badge.plus',
+    color: '#5856D6',
+  },
+];
+
+export const primaryAccountIds = [
+  'assets:checking',
+  'liabilities:credit-cards',
+  'assets:savings',
+];
+
+export const accountHistory: Record<string, number[]> = {
+  'assets:checking': [7210, 7480, 7150, 7890, 8120, 7740, 8260, 8010, 8540, 8170, 8390, 8421.18],
+  'assets:savings': [38940, 39420, 39760, 40180, 40620, 41040, 41220, 41680, 41920, 42110, 42240, 42385.68],
+  'liabilities:credit-cards': [-1480, -1720, -1630, -1940, -1810, -2230, -2070, -2360, -2140, -2460, -2310, -2186.44],
 };
 
 export const netWorthTrend = [

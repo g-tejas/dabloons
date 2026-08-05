@@ -25,6 +25,24 @@ export default function OverviewStackLayout() {
           title: 'Category',
         }}
       />
+      <Stack.Screen
+        name="account/[id]"
+        options={{
+          animation: 'slide_from_right',
+          headerBackTitle: 'Overview',
+          headerLargeTitle: false,
+          title: 'Account',
+        }}
+      />
+      <Stack.Screen
+        name="transaction/new"
+        options={{
+          animation: 'slide_from_bottom',
+          headerBackTitle: 'Cancel',
+          headerLargeTitle: false,
+          title: 'New Transaction',
+        }}
+      />
     </Stack>
   );
 }

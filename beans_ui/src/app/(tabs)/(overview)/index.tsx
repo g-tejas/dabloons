@@ -1,5 +1,5 @@
 import * as Haptics from 'expo-haptics';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, useColorScheme, View } from 'react-native';
 
@@ -14,46 +14,17 @@ import { TransactionRow } from '@/components/finance/transaction-row';
 import {
   budgets,
   formatMoney,
+  ledgerAccounts,
   netWorthTrend,
   overview,
-  recentTransactions,
-  type FinanceIconName,
+  primaryAccountIds,
 } from '@/constants/finance-data';
 import { BottomTabInset, Colors, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
+import { useLedger } from '@/context/ledger-context';
 
-const accounts: {
-  name: string;
-  detail: string;
-  value: number;
-  symbol: 'building.columns.fill' | 'creditcard.fill' | 'chart.line.uptrend.xyaxis';
-  fallback: FinanceIconName;
-  color: string;
-}[] = [
-  {
-    name: 'Everyday Checking',
-    detail: 'First Union ••2048',
-    value: 8421.18,
-    symbol: 'building.columns.fill',
-    fallback: 'account-balance',
-    color: '#007AFF',
-  },
-  {
-    name: 'Credit Cards',
-    detail: '2 cards · $842 due Sep 3',
-    value: -2186.44,
-    symbol: 'creditcard.fill',
-    fallback: 'credit-card',
-    color: '#FF9500',
-  },
-  {
-    name: 'Investments',
-    detail: 'Retirement and brokerage',
-    value: 42385.68,
-    symbol: 'chart.line.uptrend.xyaxis',
-    fallback: 'show-chart',
-    color: '#34C759',
-  },
-];
+const accounts = primaryAccountIds
+  .map((id) => ledgerAccounts.find((account) => account.id === id))
+  .filter((account) => account !== undefined);
 
 const cashFlowTrend = [3054, 2180, 3470, 2560, 3820, 2910, 3260, 2260, 3610, 2820, 4010, 2980];
 const chartLabels = ['Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'];
@@ -61,6 +32,8 @@ const chartLabels = ['Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'Ma
 export default function OverviewScreen() {
   const scheme = useColorScheme() ?? 'light';
   const theme = Colors[scheme];
+  const router = useRouter();
+  const { transactions } = useLedger();
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [chartMode, setChartMode] = useState<'Net Worth' | 'Cash Flow'>('Net Worth');
   const [visibilityAnimation, setVisibilityAnimation] = useState(0);
@@ -75,18 +48,32 @@ export default function OverviewScreen() {
       <Stack.Screen
         options={{
           headerRight: () => (
-            <Pressable
-              accessibilityLabel="Profile and settings"
-              hitSlop={10}
-              onPress={() => Alert.alert('Dabloons', 'Profile and settings will live here.')}
-              style={({ pressed }) => pressed && styles.controlPressed}>
-              <SystemIcon
-                color={theme.accent}
-                fallback="account-circle"
-                name="person.crop.circle"
-                size={27}
-              />
-            </Pressable>
+            <View style={styles.headerActions}>
+              <Pressable
+                accessibilityLabel="Add transaction"
+                hitSlop={10}
+                onPress={() => router.push('/transaction/new')}
+                style={({ pressed }) => pressed && styles.controlPressed}>
+                <SystemIcon
+                  color={theme.accent}
+                  fallback="add-circle-outline"
+                  name="plus.circle"
+                  size={27}
+                />
+              </Pressable>
+              <Pressable
+                accessibilityLabel="Profile and settings"
+                hitSlop={10}
+                onPress={() => Alert.alert('Dabloons', 'Profile and settings will live here.')}
+                style={({ pressed }) => pressed && styles.controlPressed}>
+                <SystemIcon
+                  color={theme.accent}
+                  fallback="account-circle"
+                  name="person.crop.circle"
+                  size={27}
+                />
+              </Pressable>
+            </View>
           ),
         }}
       />
@@ -188,8 +175,13 @@ export default function OverviewScreen() {
           <InsetGroup>
             {accounts.map((account, index) => (
               <Pressable
-                key={account.name}
-                onPress={() => Alert.alert(account.name, account.detail)}
+                key={account.id}
+                onPress={() =>
+                  router.push({
+                    pathname: '/account/[id]',
+                    params: { id: account.id },
+                  })
+                }
                 style={({ pressed }) => [
                   styles.accountRow,
                   pressed && { backgroundColor: theme.backgroundElement },
@@ -197,7 +189,7 @@ export default function OverviewScreen() {
                 <View style={[styles.accountIcon, { backgroundColor: `${account.color}18` }]}>
                   <SystemIcon
                     color={account.color}
-                    fallback={account.fallback}
+                    fallback={account.icon}
                     name={account.symbol}
                     size={20}
                   />
@@ -214,7 +206,9 @@ export default function OverviewScreen() {
                     <Text style={[styles.rowTitle, { color: theme.text }]}>{account.name}</Text>
                     <Text style={[styles.rowDetail, { color: theme.textSecondary }]}>{account.detail}</Text>
                   </View>
-                  <Text style={[styles.accountValue, { color: theme.text }]}>{formatMoney(account.value)}</Text>
+                  <Text style={[styles.accountValue, { color: theme.text }]}>
+                    {formatMoney(account.balance)}
+                  </Text>
                   <SystemIcon color={theme.textTertiary} fallback="chevron-right" name="chevron.right" size={12} weight="semibold" />
                 </View>
               </Pressable>
@@ -286,10 +280,10 @@ export default function OverviewScreen() {
             title="Recent Transactions"
           />
           <InsetGroup style={styles.transactionGroup}>
-            {recentTransactions.map((transaction, index) => (
+            {transactions.slice(0, 5).map((transaction, index, visibleTransactions) => (
               <TransactionRow
                 key={transaction.id}
-                last={index === recentTransactions.length - 1}
+                last={index === visibleTransactions.length - 1}
                 transaction={transaction}
               />
             ))}
@@ -377,6 +371,11 @@ const styles = StyleSheet.create({
   },
   controlPressed: {
     opacity: 0.45,
+  },
+  headerActions: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: Spacing.three,
   },
   segmentedControl: {
     borderRadius: 9,

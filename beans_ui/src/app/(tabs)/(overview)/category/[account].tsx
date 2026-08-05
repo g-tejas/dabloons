@@ -12,11 +12,11 @@ import { TransactionRow } from '@/components/finance/transaction-row';
 import {
   categoryMeta,
   formatMoney,
-  recentTransactions,
   type FinanceIconName,
   type FinanceTransaction,
 } from '@/constants/finance-data';
 import { BottomTabInset, Colors, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
+import { useLedger } from '@/context/ledger-context';
 
 const weeklySpend = [42, 68, 36, 88, 55, 73, 49, 92, 62, 78, 58, 70];
 const merchantsByAccount: Record<string, { name: string; amount: number; share: number }[]> = {
@@ -48,6 +48,7 @@ export default function CategoryDetailScreen() {
   const params = useLocalSearchParams<{ account?: string | string[] }>();
   const scheme = useColorScheme() ?? 'light';
   const theme = Colors[scheme];
+  const { transactions: ledgerTransactions } = useLedger();
   const [period, setPeriod] = useState<Period>('Month');
   const rawAccount = Array.isArray(params.account) ? params.account[0] : params.account;
   const account = decodeURIComponent(rawAccount ?? 'expenses:other');
@@ -64,7 +65,9 @@ export default function CategoryDetailScreen() {
     { name: 'Top Merchant', amount: meta.spent * 0.42, share: 42 },
     { name: 'Everything Else', amount: meta.spent * 0.36, share: 36 },
   ];
-  const matchingTransactions = recentTransactions.filter((transaction) => transaction.account === account);
+  const matchingTransactions = ledgerTransactions.filter(
+    (transaction) => transaction.account === account,
+  );
   const transactions: FinanceTransaction[] = matchingTransactions.length
     ? matchingTransactions
     : [

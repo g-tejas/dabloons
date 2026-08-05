@@ -74,7 +74,7 @@ function CustomTabList(props: TabListProps) {
           },
         ]}>
         <View style={[styles.bean, { backgroundColor: theme.accent }]} />
-        <Text style={[styles.brand, { color: theme.text }]}>beans</Text>
+        <Text style={[styles.brand, { color: theme.text }]}>Dabloons</Text>
         <View style={styles.separator} />
         {props.children}
       </View>

@@ -1,15 +1,16 @@
 {
   "expo": {
-    "name": "Beans",
-    "slug": "beans",
+    "name": "Dabloons",
+    "slug": "dabloons",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "beans",
+    "scheme": "dabloons",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "app.dabloons.mobile"
     },
     "android": {
       "adaptiveIcon": {

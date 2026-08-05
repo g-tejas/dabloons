@@ -71,7 +71,7 @@ export default function OverviewScreen() {
             <Pressable
               accessibilityLabel="Profile and settings"
               hitSlop={10}
-              onPress={() => Alert.alert('Beans', 'Profile and settings will live here.')}
+              onPress={() => Alert.alert('Dabloons', 'Profile and settings will live here.')}
               style={({ pressed }) => pressed && styles.controlPressed}>
               <SystemIcon
                 color={theme.accent}

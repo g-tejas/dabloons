@@ -10,6 +10,7 @@ The current vertical slice supports:
 
 - format-agnostic statement upload and GPT compilation;
 - manual creation and editing of balanced staged transactions;
+- persistent group IDs for transactions representing the same economic event;
 - individual approval after prospective full-journal hledger validation;
 - immutable reconciled journal batches;
 - user-authorized balance assertions without documentary evidence;
@@ -33,6 +34,12 @@ Open <http://127.0.0.1:8000> for the review UI or
 
 Runtime data defaults to `./data`. Set `DABLOONS_DATA_DIR` to change it and
 `DABLOONS_OPENAI_MODEL` to select the GPT model.
+
+Transactions are stored directly as hledger journal files. Editable staged
+entries use `!` under `data/ledger/staged`; approved immutable entries use `*`
+under `data/ledger/reconciled`. `canonical.journal` includes only reconciled
+entries, while `review.journal` includes both. Uploaded statements remain raw
+files under `data/sources`; no database is required.
 
 ## Test
 

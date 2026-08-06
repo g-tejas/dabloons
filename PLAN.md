@@ -310,7 +310,8 @@ Input context should include only relevant information:
 
 The AI decides:
 
-- payee and note normalization
+- exact bank-statement text for `statement_description` and a concise semantic
+  meaning for `note`
 - counteraccount selection
 - transfer recognition
 - refund and reversal treatment
@@ -394,8 +395,8 @@ A representative compiled item:
     "id": "txn_01J...",
     "date": "2026-07-02",
     "status": "staged",
-    "payee": "Some Merchant",
-    "note": "",
+    "statement_description": "VISA PURCHASE APPLE STORE 0702",
+    "note": "iPad purchase",
     "postings": [
       {
         "account": "expenses:food",
@@ -414,7 +415,7 @@ A representative compiled item:
 }
 ```
 
-All quantities are decimal strings. IDs, source references, model details, and review decisions are preserved independently of journal formatting.
+All quantities are decimal strings. IDs, model details, and review decisions are preserved independently of journal formatting.
 
 ## 9. Deterministic journal renderer
 
@@ -423,11 +424,12 @@ The renderer converts approved typed IR into consistent hledger syntax. AI does 
 Example reconciled transaction:
 
 ```journal
-2026-07-02 * Some Merchant
+2026-07-02 * VISA PURCHASE APPLE STORE 0702
     ; id: txn_01J...
+    ; transaction-group: txg_01J...
+    ; note: iPad purchase
     ; reconciliation: rec_01J...
     ; statement: stmt_01J...
-    ; source-ref: page-2-row-14
     ; ai-run: run_01J...
     expenses:food                 S$12.30
     assets:bank:checking
@@ -506,7 +508,7 @@ The primary UI is a source-to-ledger review workspace.
 ```text
 +--------------------------+-----------------------------+
 | Original statement       | Candidate transaction       |
-| Page, image, or CSV grid | Date, payee, and postings   |
+| Page, image, or CSV grid | Date, statement description, and postings |
 | Highlight source item    | Amount, account, warnings   |
 +--------------------------+-----------------------------+
 | Opening | Debits | Credits | Closing | Difference      |
@@ -518,7 +520,7 @@ The reviewer can:
 - navigate source items;
 - see the corresponding candidate immediately;
 - inspect AI confidence and critic warnings;
-- edit date, payee, note, amount, commodity, or account;
+- edit date, statement description, note, amount, commodity, or account;
 - split or merge items;
 - match an item to an existing reconciled transaction;
 - match or replace a staged manual transaction;
@@ -557,25 +559,22 @@ validate complete journal
 atomic batch-file rename
         |
         v
-Git commit and database finalization
+remove the staged journal file
 ```
 
 Detailed protocol:
 
-1. Freeze the reviewed candidate revision and compute its hash.
-2. Acquire a global journal promotion lock.
-3. Reload the latest reconciled state.
-4. Re-run duplicate, match, and watermark checks.
-5. Render the proposed batch to a temporary file.
-6. Assemble and validate the complete temporary journal.
-7. Atomically rename the batch into `reconciled/`.
-8. Write its content-addressed reconciliation manifest.
-9. Commit the batch and manifest to Git.
-10. Mark the database reconciliation record committed.
-11. Refresh projections and read models.
-12. Release the lock.
+1. Acquire the journal promotion lock.
+2. Reload the staged `!` transaction and verify its revision.
+3. Render the same transaction as a proposed `*` entry.
+4. Validate the reconciled journal plus the proposed entry.
+5. Atomically write the immutable entry into `reconciled/`.
+6. Remove its mutable file from `staged/`.
+7. Release the lock.
 
-Filesystem, Git, and database changes cannot share one true transaction. Every step must therefore be idempotent. Startup and background recovery compare reconciliation IDs, batch hashes, Git state, and database state to finish or report interrupted promotions safely.
+The reconciled file is written first so a crash cannot lose an approved
+transaction. Startup recovery removes any staged file whose transaction ID
+already exists in `reconciled/`.
 
 ## 13. REST API
 
@@ -630,24 +629,18 @@ Web PWA / Phone app / Other clients
        |                    |
 Statement compiler     Accounting domain
        |                    |
-AI provider adapters   Reconciliation service
+AI provider adapters   hledger adapter
        |                    |
-Document storage       hledger engine adapter
-       |                    |
-       +---------+----------+
-                 |
-   +-------------+--------------+
-   |             |              |
-PostgreSQL   Object storage   Journal + Git
+Raw statement files    Journal files
 ```
 
 Proposed implementation stack:
 
 - Python
 - FastAPI and Pydantic
-- PostgreSQL for workflow state, immutable revisions, and projections
-- a background-job mechanism for model calls
-- encrypted filesystem or S3-compatible object storage for source documents
+- raw filesystem storage for uploaded statements
+- mutable `!` journal files for staged transactions
+- immutable `*` journal files for reconciled transactions and watermarks
 - hledger CLI invoked through a narrow adapter
 - responsive web/PWA frontend first
 
@@ -850,7 +843,7 @@ These should be resolved during Phase 0 without changing the core architecture:
 - AI provider(s), privacy terms, and fallback policy
 - hosting and authentication model
 - source-document retention duration
-- exact database and background-job technology
+- background-job execution strategy
 - chart-of-accounts declaration and naming conventions
 - handling of transactions that affect two separately watermarked real-world accounts
 - exact correction-date and reporting policy

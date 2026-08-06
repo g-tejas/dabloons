@@ -36,15 +36,23 @@ class PostingInput(BaseModel):
 
 class TransactionInput(BaseModel):
     date: date
-    payee: str = Field(min_length=1)
-    note: str = ""
+    statement_description: str = Field(
+        min_length=1,
+        description="Exact transaction description shown on the bank statement",
+    )
+    note: str = Field(
+        default="",
+        description="Semantic meaning of the transaction, such as 'iPad purchase'",
+    )
     postings: list[PostingInput] = Field(min_length=2)
     statement_id: str | None = None
-    source_reference: str | None = None
+    transaction_group_id: str | None = Field(
+        default=None, pattern=r"^txg_[0-9a-f]{32}$"
+    )
 
-    @field_validator("payee")
+    @field_validator("statement_description")
     @classmethod
-    def strip_payee(cls, value: str) -> str:
+    def strip_statement_description(cls, value: str) -> str:
         value = value.strip()
         if not value:
             raise ValueError("must not be blank")
@@ -67,6 +75,7 @@ class Transaction(TransactionInput):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
+    transaction_group_id: str = Field(pattern=r"^txg_[0-9a-f]{32}$")
     state: TransactionState
     created_at: datetime
     approved_at: datetime | None = None
@@ -105,10 +114,14 @@ class Watermark(WatermarkInput):
 
 class AITransaction(BaseModel):
     date: date
-    payee: str
-    note: str = ""
+    statement_description: str = Field(
+        description="Exact transaction description shown on the bank statement"
+    )
+    note: str = Field(
+        default="",
+        description="Semantic meaning of the transaction, such as 'iPad purchase'",
+    )
     postings: list[PostingInput]
-    source_reference: str | None = None
 
 
 class AICompilation(BaseModel):

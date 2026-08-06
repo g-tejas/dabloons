@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -10,13 +11,63 @@ from dabloons.app import create_app
 
 
 @pytest.mark.skipif(shutil.which("hledger") is None, reason="hledger is not installed")
+def test_canonical_journal_excludes_staged_transactions(tmp_path: Path) -> None:
+    api = TestClient(create_app(data_dir=tmp_path))
+    staged = api.post(
+        "/v1/staged-transactions",
+        json={
+            "date": "2026-08-01",
+            "statement_description": "PENDING PURCHASE",
+            "note": "Pending purchase",
+            "postings": [
+                {
+                    "account": "expenses:misc",
+                    "commodity": "USD",
+                    "quantity": "10.00",
+                },
+                {
+                    "account": "assets:bank:checking",
+                    "commodity": "USD",
+                    "quantity": "-10.00",
+                },
+            ],
+        },
+    ).json()
+
+    canonical = subprocess.run(
+        ["hledger", "-f", str(tmp_path / "ledger" / "canonical.journal"), "print"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    review = subprocess.run(
+        ["hledger", "-f", str(tmp_path / "ledger" / "review.journal"), "print"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert "PENDING PURCHASE" not in canonical.stdout
+    assert "PENDING PURCHASE" in review.stdout
+
+    assert api.post(f"/v1/staged-transactions/{staged['id']}/approve").status_code == 200
+    canonical = subprocess.run(
+        ["hledger", "-f", str(tmp_path / "ledger" / "canonical.journal"), "print"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert "PENDING PURCHASE" in canonical.stdout
+
+
+@pytest.mark.skipif(shutil.which("hledger") is None, reason="hledger is not installed")
 def test_existing_watermark_rejects_an_old_dated_promotion(tmp_path: Path) -> None:
     api = TestClient(create_app(data_dir=tmp_path))
     opening = api.post(
         "/v1/staged-transactions",
         json={
             "date": "2026-08-01",
-            "payee": "Opening balance",
+            "statement_description": "Opening balance",
             "postings": [
                 {
                     "account": "assets:bank:checking",
@@ -52,7 +103,7 @@ def test_existing_watermark_rejects_an_old_dated_promotion(tmp_path: Path) -> No
         "/v1/staged-transactions",
         json={
             "date": "2026-08-02",
-            "payee": "Late old expense",
+            "statement_description": "Late old expense",
             "postings": [
                 {
                     "account": "assets:bank:checking",

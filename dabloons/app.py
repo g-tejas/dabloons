@@ -56,11 +56,16 @@ def create_app(
     hledger_executable: str = "hledger",
 ) -> FastAPI:
     root = data_dir or Path(os.environ.get("DABLOONS_DATA_DIR", "data"))
-    sources = root / "sources"
-    sources.mkdir(parents=True, exist_ok=True)
-    store = Store(root / "dabloons.sqlite3")
     ledger = Hledger(root / "ledger", hledger_executable)
+    store = Store(root, ledger)
     promotion_lock = threading.Lock()
+
+    def transaction_group_id(requested: str | None = None) -> str:
+        if requested is None:
+            return _id("txg")
+        if not store.transaction_group_exists(requested):
+            raise HTTPException(404, "Transaction group not found")
+        return requested
 
     app = FastAPI(
         title="Dabloons API",
@@ -91,8 +96,7 @@ def create_app(
             status=StatementStatus.UPLOADED,
             created_at=_now(),
         )
-        (sources / statement.id).write_bytes(content)
-        store.put_statement(statement)
+        store.create_statement(statement, content)
         return statement
 
     @app.get("/v1/statements", response_model=list[Statement])
@@ -111,8 +115,11 @@ def create_app(
         statement = store.get_statement(statement_id)
         if not statement:
             raise HTTPException(404, "Statement not found")
+        source = store.statement_source(statement_id)
+        if source is None:
+            raise HTTPException(404, "Statement source not found")
         return FileResponse(
-            sources / statement.id,
+            source,
             media_type=statement.media_type,
             filename=statement.filename,
         )
@@ -127,6 +134,9 @@ def create_app(
         statement = store.get_statement(statement_id)
         if not statement:
             raise HTTPException(404, "Statement not found")
+        source = store.statement_source(statement_id)
+        if source is None:
+            raise HTTPException(404, "Statement source not found")
         selected_compiler = compiler
         if selected_compiler is None:
             try:
@@ -137,7 +147,7 @@ def create_app(
                 raise HTTPException(503, f"GPT compiler unavailable: {error}") from error
         try:
             compilation = selected_compiler.compile(
-                sources / statement.id,
+                source,
                 filename=statement.filename,
                 media_type=statement.media_type,
                 target_account=request.target_account,
@@ -148,33 +158,27 @@ def create_app(
                 transaction = Transaction(
                     **proposal.model_dump(),
                     id=_id("txn"),
+                    transaction_group_id=transaction_group_id(),
                     state=TransactionState.STAGED,
                     statement_id=statement.id,
                     created_at=_now(),
                 )
                 store.create_transaction(transaction)
                 transactions.append(transaction)
-            store.put_statement(
-                statement.model_copy(update={"status": StatementStatus.COMPILED, "error": None})
-            )
             return CompilationResult(
                 transactions=transactions, warnings=compilation.warnings
             )
         except HTTPException:
             raise
         except Exception as error:
-            store.put_statement(
-                statement.model_copy(
-                    update={"status": StatementStatus.FAILED, "error": str(error)}
-                )
-            )
             raise HTTPException(502, f"Statement compilation failed: {error}") from error
 
     @app.post("/v1/staged-transactions", response_model=Transaction, status_code=201)
     def create_staged_transaction(request: TransactionInput) -> Transaction:
         transaction = Transaction(
-            **request.model_dump(),
+            **request.model_dump(exclude={"transaction_group_id"}),
             id=_id("txn"),
+            transaction_group_id=transaction_group_id(request.transaction_group_id),
             state=TransactionState.STAGED,
             created_at=_now(),
         )
@@ -203,23 +207,33 @@ def create_app(
             raise HTTPException(404, "Transaction not found")
         if current.state != TransactionState.STAGED:
             raise HTTPException(409, "Reconciled transactions are immutable")
+        group_id = (
+            current.transaction_group_id
+            if request.transaction.transaction_group_id is None
+            else transaction_group_id(request.transaction.transaction_group_id)
+        )
         updated = Transaction(
-            **request.transaction.model_dump(),
+            **request.transaction.model_dump(exclude={"transaction_group_id"}),
             id=current.id,
+            transaction_group_id=group_id,
             state=current.state,
             created_at=current.created_at,
             revision=current.revision + 1,
         )
-        if not store.replace_staged_transaction(
-            transaction_id, request.expected_revision, updated
-        ):
-            raise HTTPException(409, "Staged transaction changed; reload and try again")
+        with promotion_lock:
+            if not store.replace_staged_transaction(
+                transaction_id, request.expected_revision, updated
+            ):
+                raise HTTPException(
+                    409, "Staged transaction changed; reload and try again"
+                )
         return updated
 
     @app.delete("/v1/staged-transactions/{transaction_id}", status_code=204)
     def delete_staged_transaction(transaction_id: str) -> None:
-        if not store.delete_staged_transaction(transaction_id):
-            raise HTTPException(404, "Editable staged transaction not found")
+        with promotion_lock:
+            if not store.delete_staged_transaction(transaction_id):
+                raise HTTPException(404, "Editable staged transaction not found")
 
     @app.post(
         "/v1/staged-transactions/{transaction_id}/approve",

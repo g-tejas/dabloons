@@ -16,7 +16,8 @@ class FakeCompiler:
             transactions=[
                 AITransaction(
                     date="2026-08-01",
-                    payee="Coffee",
+                    statement_description="Coffee",
+                    note="Coffee purchase",
                     postings=[
                         PostingInput(
                             account="expenses:food",
@@ -29,7 +30,6 @@ class FakeCompiler:
                             quantity="-4.50",
                         ),
                     ],
-                    source_reference="row 1",
                 )
             ]
         )
@@ -59,6 +59,13 @@ def test_upload_compile_edit_and_individually_approve(tmp_path: Path) -> None:
         files={"source": ("statement.csv", b"2026-08-01,Coffee,-4.50", "text/csv")},
     )
     assert uploaded.status_code == 201
+    statement_directory = (
+        tmp_path / "data" / "sources" / uploaded.json()["id"]
+    )
+    source_files = list(statement_directory.iterdir())
+    assert len(source_files) == 1
+    assert source_files[0].name == "statement.csv"
+    assert not (tmp_path / "data" / "dabloons.sqlite3").exists()
 
     compiled = api.post(
         f"/v1/statements/{uploaded.json()['id']}/compile",
@@ -68,16 +75,23 @@ def test_upload_compile_edit_and_individually_approve(tmp_path: Path) -> None:
         },
     )
     assert compiled.status_code == 200
+    assert api.get(f"/v1/statements/{uploaded.json()['id']}").json()["status"] == "compiled"
     staged = compiled.json()["transactions"][0]
     assert staged["state"] == "staged"
+    assert staged["statement_description"] == "Coffee"
+    assert staged["note"] == "Coffee purchase"
+    assert "source_reference" not in staged
+    staged_journal = (
+        tmp_path / "data" / "ledger" / "staged" / f"{staged['id']}.journal"
+    )
+    assert f"{staged['date']} ! Coffee" in staged_journal.read_text()
 
     edited = {
         "date": staged["date"],
-        "payee": "Neighborhood Coffee",
+        "statement_description": "Neighborhood Coffee",
         "note": "Reviewed manually",
         "postings": staged["postings"],
         "statement_id": staged["statement_id"],
-        "source_reference": staged["source_reference"],
     }
     updated = api.patch(
         f"/v1/staged-transactions/{staged['id']}",
@@ -92,6 +106,9 @@ def test_upload_compile_edit_and_individually_approve(tmp_path: Path) -> None:
     assert approved.json()["approved_at"]
     batch = tmp_path / "data" / "ledger" / "reconciled" / f"{staged['id']}.journal"
     assert "Neighborhood Coffee" in batch.read_text()
+    assert f"; transaction-group: {staged['transaction_group_id']}" in batch.read_text()
+    assert "source-ref:" not in batch.read_text()
+    assert not staged_journal.exists()
 
     immutable = api.patch(
         f"/v1/staged-transactions/{staged['id']}",
@@ -106,7 +123,7 @@ def test_manual_transaction_must_balance(tmp_path: Path) -> None:
         "/v1/staged-transactions",
         json={
             "date": "2026-08-01",
-            "payee": "Broken entry",
+            "statement_description": "Broken entry",
             "postings": [
                 {
                     "account": "assets:bank:checking",
@@ -122,6 +139,110 @@ def test_manual_transaction_must_balance(tmp_path: Path) -> None:
         },
     )
     assert response.status_code == 422
+
+
+def test_transactions_receive_groups_and_can_reuse_an_existing_group(
+    tmp_path: Path,
+) -> None:
+    api = client(tmp_path)
+    transaction = {
+        "date": "2026-08-01",
+        "statement_description": "Tablet",
+        "postings": [
+            {
+                "account": "expenses:electronics",
+                "commodity": "USD",
+                "quantity": "500.00",
+            },
+            {
+                "account": "assets:bank:checking",
+                "commodity": "USD",
+                "quantity": "-500.00",
+            },
+        ],
+    }
+
+    purchase = api.post("/v1/staged-transactions", json=transaction)
+    unrelated = api.post(
+        "/v1/staged-transactions",
+        json={**transaction, "statement_description": "Another purchase"},
+    )
+
+    assert purchase.status_code == 201
+    assert unrelated.status_code == 201
+    purchase_group = purchase.json()["transaction_group_id"]
+    assert purchase_group.startswith("txg_")
+    assert unrelated.json()["transaction_group_id"] != purchase_group
+
+    refund = api.post(
+        "/v1/staged-transactions",
+        json={
+            **transaction,
+            "statement_description": "Tablet refund",
+            "transaction_group_id": purchase_group,
+            "postings": [
+                {
+                    "account": "expenses:electronics",
+                    "commodity": "USD",
+                    "quantity": "-500.00",
+                },
+                {
+                    "account": "assets:bank:checking",
+                    "commodity": "USD",
+                    "quantity": "500.00",
+                },
+            ],
+        },
+    )
+
+    assert refund.status_code == 201
+    assert refund.json()["transaction_group_id"] == purchase_group
+
+    unrelated_body = unrelated.json()
+    regrouped = api.patch(
+        f"/v1/staged-transactions/{unrelated_body['id']}",
+        json={
+            "expected_revision": unrelated_body["revision"],
+            "transaction": {
+                "date": unrelated_body["date"],
+                "statement_description": unrelated_body["statement_description"],
+                "note": unrelated_body["note"],
+                "postings": unrelated_body["postings"],
+                "statement_id": unrelated_body["statement_id"],
+                "transaction_group_id": purchase_group,
+            },
+        },
+    )
+
+    assert regrouped.status_code == 200
+    assert regrouped.json()["transaction_group_id"] == purchase_group
+
+
+def test_unknown_transaction_group_is_rejected(tmp_path: Path) -> None:
+    api = client(tmp_path)
+    response = api.post(
+        "/v1/staged-transactions",
+        json={
+            "date": "2026-08-01",
+            "statement_description": "Unknown group",
+            "transaction_group_id": "txg_1234567890abcdef1234567890abcdef",
+            "postings": [
+                {
+                    "account": "expenses:misc",
+                    "commodity": "USD",
+                    "quantity": "1.00",
+                },
+                {
+                    "account": "assets:bank:checking",
+                    "commodity": "USD",
+                    "quantity": "-1.00",
+                },
+            ],
+        },
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Transaction group not found"
 
 
 def test_user_can_create_watermark_without_evidence(tmp_path: Path) -> None:
@@ -151,3 +272,45 @@ def test_user_can_create_watermark_without_evidence(tmp_path: Path) -> None:
         },
     )
     assert same_day.status_code == 409
+
+
+def test_missing_hledger_rejects_approval_and_keeps_transaction_staged(
+    tmp_path: Path,
+) -> None:
+    api = TestClient(
+        create_app(
+            data_dir=tmp_path / "data",
+            compiler=FakeCompiler(),
+            hledger_executable=str(tmp_path / "not-installed-hledger"),
+        )
+    )
+    staged = api.post(
+        "/v1/staged-transactions",
+        json={
+            "date": "2026-08-04",
+            "statement_description": "Safe failure",
+            "postings": [
+                {
+                    "account": "assets:bank:checking",
+                    "commodity": "USD",
+                    "quantity": "-5.00",
+                },
+                {
+                    "account": "expenses:misc",
+                    "commodity": "USD",
+                    "quantity": "5.00",
+                },
+            ],
+        },
+    ).json()
+
+    rejected = api.post(f"/v1/staged-transactions/{staged['id']}/approve")
+
+    assert rejected.status_code == 409
+    assert "is not installed" in rejected.json()["detail"]
+    assert (
+        api.get(f"/v1/transactions/{staged['id']}").json()["state"] == "staged"
+    )
+    assert not list(
+        (tmp_path / "data" / "ledger" / "reconciled").glob("txn_*.journal")
+    )
